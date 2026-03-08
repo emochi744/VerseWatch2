@@ -30,6 +30,7 @@ function hasTMDBKey() {
 
 // Poster sizes: w92, w154, w185, w342, w500, w780, original
 const POSTER_SIZE = 'w342';
+const THUMB_SIZE = 'w154';
 const BACKDROP_SIZE = 'w780';
 
 function getCache() {
@@ -139,6 +140,7 @@ async function getMovieDetails(tmdbId, type = 'movie') {
                 originalTitle: tmdbData.original_title || tmdbData.original_name,
                 overview: tmdbData.overview || '',
                 posterUrl: tmdbData.poster_path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${POSTER_SIZE}${tmdbData.poster_path}&output=webp&n=1&q=70` : null,
+                thumbUrl: tmdbData.poster_path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${THUMB_SIZE}${tmdbData.poster_path}&output=webp&n=1&q=70` : null,
                 backdropUrl: tmdbData.backdrop_path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${BACKDROP_SIZE}${tmdbData.backdrop_path}&output=webp&n=1&q=70` : null,
                 rating: tmdbData.vote_average ? parseFloat(tmdbData.vote_average.toFixed(1)) : 0,
                 releaseDate: tmdbData.release_date || tmdbData.first_air_date,

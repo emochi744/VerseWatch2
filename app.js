@@ -124,13 +124,20 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('versewatch_tmdb_cache');
         localStorage.setItem('versewatch_final_refresh_v1', 'done');
     }
+    // Detect if running on file:// and suggest installation for better performance
+    if (window.location.protocol === 'file:') {
+        setTimeout(() => {
+            showToast("İpucu: Daha hızlı ve sorunsuz bir deneyim için uygulamayı yükleyin! 📲🚀", "info");
+        }, 3000);
+    }
+
     renderHomeView();
     setupNav();
     setupSearch();
     setupModal();
 
-    // We now have a default key, so just silently preload all universe posters
-    setTimeout(() => preloadAllUniverses(), 1000);
+    // Start preloading immediately
+    preloadAllUniverses();
 
     // PWA Install Prompt Logic
     let deferredPrompt;
@@ -461,29 +468,28 @@ async function preloadAllUniverses() {
         if (data) {
             posterCache[firstItem.id] = data;
             prefetchImage(data.backdropUrl);
-            prefetchImage(data.posterUrl);
+            prefetchImage(data.thumbUrl || data.posterUrl);
         }
     }));
     renderPortalGrid(); // Render all portals immediately as soon as metadata is ready
 
-    // 2. Parallelize everything else in large batches
+    // 2. Parallelize everything else in massive batches
     for (const universe of UNIVERSES) {
-        const BATCH = 15; // Increased from 5 to 15
+        const BATCH = 25; // Massive parallelization for file:// protocol
         for (let i = 0; i < universe.items.length; i += BATCH) {
             const batch = universe.items.slice(i, i + BATCH);
             await Promise.all(batch.map(async item => {
                 if (posterCache[item.id]) {
-                    prefetchImage(posterCache[item.id].posterUrl);
+                    prefetchImage(posterCache[item.id].thumbUrl || posterCache[item.id].posterUrl);
                     return;
                 }
                 const data = await getMovieDetails(item.tmdbId, item.type);
                 if (data) {
                     posterCache[item.id] = data;
-                    prefetchImage(data.posterUrl);
+                    prefetchImage(data.thumbUrl || data.posterUrl);
                     if (currentUniverseId === universe.id) updateMovieCard(item);
                 }
             }));
-            // No more delays between batches - full speed ahead
         }
     }
 }
