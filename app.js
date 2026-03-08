@@ -15,6 +15,7 @@ let posterCache = {}; // { itemId: tmdbData }
 // User Feedback Storage Helpers
 const getRatings = () => JSON.parse(localStorage.getItem('versewatch_ratings') || '{}');
 const getComments = () => JSON.parse(localStorage.getItem('versewatch_comments') || '{}');
+const getRecent = () => JSON.parse(localStorage.getItem('versewatch_recent') || []);
 
 const saveRating = (itemId, rating) => {
     const r = getRatings();
@@ -29,6 +30,60 @@ const saveComment = (itemId, comment) => {
     else c[itemId] = comment;
     localStorage.setItem('versewatch_comments', JSON.stringify(c));
 };
+
+const addToRecent = (itemId) => {
+    let recent = getRecent();
+    recent = [itemId, ...recent.filter(id => id !== itemId)].slice(0, 10);
+    localStorage.setItem('versewatch_recent', JSON.stringify(recent));
+};
+
+// ============================================
+// GAMIFICATION
+// ============================================
+const RANKS = [
+    { min: 0, name: 'Film Meraklısı', level: 1 },
+    { min: 10, name: 'Sıkı İzleyici', level: 2 },
+    { min: 30, name: 'Sinefil Adayı', level: 3 },
+    { min: 60, name: 'Gerçek Sinefil', level: 4 },
+    { min: 100, name: 'Koleksiyoncu', level: 5 },
+    { min: 200, name: 'Film Gurusu', level: 6 },
+    { min: 350, name: 'Sinema Üstadı', level: 7 },
+    { min: 500, name: 'Efsanevi İzleyici', level: 8 }
+];
+
+function updateLevelUI() {
+    let totalWatched = 0;
+    UNIVERSES.forEach(u => totalWatched += getUniverseStats(u).done);
+
+    let currentRank = RANKS[0];
+    let nextRank = RANKS[1];
+
+    for (let i = 0; i < RANKS.length; i++) {
+        if (totalWatched >= RANKS[i].min) {
+            currentRank = RANKS[i];
+            nextRank = RANKS[i + 1] || null;
+        } else {
+            break;
+        }
+    }
+
+    $('user-rank').textContent = currentRank.name;
+    $('user-level-num').textContent = `Seviye ${currentRank.level}`;
+
+    if (nextRank) {
+        const xpInLevel = totalWatched - currentRank.min;
+        const totalNeeded = nextRank.min - currentRank.min;
+        const pct = Math.min(Math.round((xpInLevel / totalNeeded) * 100), 100);
+
+        $('level-progress-fill').style.width = pct + '%';
+        $('level-xp-text').textContent = `${totalWatched} / ${nextRank.min} İzleme`;
+        $('level-percent').textContent = `%${pct}`;
+    } else {
+        $('level-progress-fill').style.width = '100%';
+        $('level-xp-text').textContent = `${totalWatched} İzleme (MAX)`;
+        $('level-percent').textContent = '%100';
+    }
+}
 
 // ============================================
 // DOM REFS
@@ -126,7 +181,46 @@ function switchView(view) {
 // ============================================
 function renderHomeView() {
     renderGlobalStats();
+    updateLevelUI();
+    renderRecentlyWatched();
     renderPortalGrid();
+}
+
+function renderRecentlyWatched() {
+    const container = $('recent-scroll');
+    const panel = $('recent-panel');
+    const recentIds = getRecent();
+
+    if (recentIds.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'block';
+    container.innerHTML = '';
+
+    recentIds.forEach(id => {
+        // Find item in UNIVERSES
+        let foundItem = null;
+        for (const u of UNIVERSES) {
+            foundItem = u.items.find(i => i.id === id);
+            if (foundItem) break;
+        }
+        if (!foundItem) return;
+
+        const tmdb = posterCache[id];
+        const card = document.createElement('div');
+        card.className = 'recent-card';
+
+        if (tmdb && tmdb.posterUrl) {
+            card.innerHTML = `<img src="${tmdb.posterUrl}" alt="${foundItem.title}">`;
+        } else {
+            card.innerHTML = `<div class="movie-poster-placeholder" style="background:${foundItem.posterCss || '#333'}"><div class="ph-text" style="font-size:10px">${foundItem.title}</div></div>`;
+        }
+
+        card.addEventListener('click', () => openModal(foundItem));
+        container.appendChild(card);
+    });
 }
 
 function renderGlobalStats() {
@@ -413,15 +507,31 @@ function setupModal() {
 
 function renderModalStars(currentRating) {
     const container = $('modal-rating-stars');
+    const display = $('modal-rating-value');
     container.innerHTML = '';
+    display.textContent = currentRating > 0 ? currentRating.toFixed(1) : '0.0';
+
     for (let i = 1; i <= 10; i++) {
         const star = document.createElement('span');
-        star.className = `star-rating ${i <= currentRating ? 'active' : ''}`;
+        star.className = 'star-rating';
         star.innerHTML = '★';
-        star.addEventListener('click', () => {
-            const newRating = i === currentRating ? 0 : i;
+
+        if (i <= Math.floor(currentRating)) {
+            star.classList.add('active');
+        } else if (i === Math.ceil(currentRating) && currentRating % 1 !== 0) {
+            star.classList.add('half');
+        }
+
+        star.addEventListener('click', (e) => {
+            const rect = star.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const isHalf = x < rect.width / 2;
+            const clickedVal = i - (isHalf ? 0.5 : 0);
+
+            const newRating = clickedVal === currentRating ? 0 : clickedVal;
             saveRating(modalItem.id, newRating);
             renderModalStars(newRating);
+
             // Update card in grid
             const card = $(`card-${modalItem.id}`);
             if (card) {
@@ -525,15 +635,20 @@ function toggleWatchModal() {
     toggleWatched(modalItem.id);
     const nowWatched = isWatched(modalItem.id);
 
+    if (nowWatched) addToRecent(modalItem.id);
+
     updateModalWatchBtn(modalItem);
 
     // Update card in grid
     const card = $(`card-${modalItem.id}`);
     if (card) card.classList.toggle('watched', nowWatched);
 
-    // Update progress bar in detail header
+    // Refresh UI Components
     const universe = UNIVERSES.find(u => u.id === currentUniverseId);
     if (universe) updateDetailProgress(universe);
+
+    updateLevelUI();
+    renderRecentlyWatched();
 
     showToast(nowWatched
         ? `✓ "${modalItem.title}" izlendi olarak işaretlendi!`
@@ -618,13 +733,36 @@ function renderStatsView() {
 
     $('stats-total-count').textContent = totalAll;
     $('stats-done-count').textContent = doneAll;
-    $('stats-movies-count').textContent = moviesWatched;
-    $('stats-series-count').textContent = seriesWatched;
+
+    // Universe Mastery Calculation
+    const masteryGrid = $('mastery-grid');
+    if (masteryGrid) {
+        masteryGrid.innerHTML = '';
+        UNIVERSES.forEach(u => {
+            const s = getUniverseStats(u);
+            if (s.done > 0) {
+                const card = document.createElement('div');
+                card.className = 'mastery-card';
+
+                let title = 'Çırak';
+                if (s.percent >= 100) title = 'Master';
+                else if (s.percent >= 75) title = 'Uzman';
+                else if (s.percent >= 50) title = 'Kıdemli';
+                else if (s.percent >= 25) title = 'Gezgin';
+
+                card.innerHTML = `
+                    <div class="mastery-icon">${u.icon}</div>
+                    <div class="mastery-name">${u.shortName}</div>
+                    <div class="mastery-title">${title}</div>
+                `;
+                masteryGrid.appendChild(card);
+            }
+        });
+    }
 
     // Universe breakdown
     const breakdown = $('stats-universe-breakdown');
     breakdown.innerHTML = '';
-
     UNIVERSES.forEach(u => {
         const s = getUniverseStats(u);
         const div = document.createElement('div');
