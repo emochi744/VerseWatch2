@@ -73,106 +73,120 @@
             <p class="portal-subtitle">Sinematik Evren Portalı</p>
           </div>
 
-        </div>
-
-        <!-- User Level & Progress -->
-        <div id="user-level-container" class="user-level-card">
-          <div class="level-header">
-            <span id="user-rank" class="level-rank-name">Yükleniyor...</span>
-            <span id="user-level-num" class="level-number">Seviye --</span>
+          <!-- Global Stats -->
+          <div class="global-stats" style="margin-bottom:32px">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-total">—</div>
+              <div class="stat-label">Toplam</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-watched" style="color:var(--accent-blue)">—</div>
+              <div class="stat-label">İzlendi</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-percent" style="color:var(--accent-purple)">—</div>
+              <div class="stat-label">Bitti</div>
+            </div>
           </div>
-          <div class="level-progress-bar-bg">
-            <div id="level-progress-fill" class="level-progress-bar-fill"></div>
+
+          <!-- User Level & Progress -->
+          <div id="user-level-container" class="user-level-card">
+            <div class="level-header">
+              <span id="user-rank" class="level-rank-name">Yükleniyor...</span>
+              <span id="user-level-num" class="level-number">Seviye --</span>
+            </div>
+            <div class="level-progress-bar-bg">
+              <div id="level-progress-fill" class="level-progress-bar-fill"></div>
+            </div>
+            <div class="level-progress-info">
+              <span id="level-xp-text">-- / -- XP</span>
+              <span id="level-percent">--%</span>
+            </div>
           </div>
-          <div class="level-progress-info">
-            <span id="level-xp-text">-- / -- XP</span>
-            <span id="level-percent">--%</span>
+
+          <!-- Recently Watched Panel -->
+          <div id="recent-panel" class="recent-section" style="display: none;">
+            <div class="section-header" style="padding-left:0; margin-bottom:12px">
+              <div class="section-title" style="font-size:16px">🕒 Son İzlediklerin</div>
+            </div>
+            <div id="recent-scroll" class="recent-scroll">
+              <!-- Recently watched items injected here -->
+            </div>
+          </div>
+
+          <div class="section-header" style="padding-left:0">
+            <div class="section-title">Evrenler</div>
+          </div>
+          <div class="portal-grid" id="portal-grid">
+            <!-- Universe cards will be injected here via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- UNIVERSE / LIST VIEW -->
+      <section id="view-universe-wrapper" class="view">
+        <div class="universe-detail-header">
+          <div class="detail-header-top">
+            <button id="btn-back" class="btn-back" onclick="hideUniverseDetail()" aria-label="Geri dön"
+              title="Ana sayfaya dön">‹</button>
+            <div class="detail-title-wrap">
+              <div id="detail-universe-name" class="detail-universe-name"></div>
+              <div id="detail-universe-progress" class="detail-universe-progress"></div>
+            </div>
+          </div>
+          <div class="detail-progress-bar">
+            <div id="detail-progress-fill" class="detail-progress-bar-fill" style="width:0%"></div>
+          </div>
+          <div id="filter-tabs" class="filter-tabs"></div>
+        </div>
+        <div id="movies-grid" class="movies-grid">
+          <!-- Movie cards will be injected here -->
+        </div>
+      </section>
+
+      <!-- STATS VIEW -->
+      <section id="view-stats" class="view stats-view">
+        <div class="stats-title">📊 İstatistikler</div>
+        <div class="stats-grid">
+          <div class="stats-detail-card">
+            <div class="big-number" id="stats-done-count" style="color: var(--accent-blue)">—</div>
+            <div class="label">İzlenen</div>
+          </div>
+          <div class="stats-detail-card">
+            <div class="big-number" id="stats-total-count" style="color: var(--accent-purple)">—</div>
+            <div class="label">Toplam</div>
           </div>
         </div>
 
-        <!-- Recently Watched Panel -->
-        <div id="recent-panel" class="recent-section" style="display: none;">
-          <div class="section-header" style="padding-left:0; margin-bottom:12px">
-            <div class="section-title" style="font-size:16px">🕒 Son İzlediklerin</div>
+        <!-- Universe Mastery Metrics -->
+        <div id="stats-mastery-container" class="mastery-section" style="margin-top: 32px; padding: 0 20px;">
+          <div class="section-header" style="padding-left:0; margin-bottom:16px">
+            <div class="section-title" style="font-size:16px">🏆 Evren Ustalığı</div>
           </div>
-          <div id="recent-scroll" class="recent-scroll">
-            <!-- Recently watched items injected here -->
+          <div id="mastery-grid" class="mastery-grid"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px;">
+            <!-- Mastery cards injected here -->
           </div>
         </div>
-
-        <div class="section-header" style="padding-left:0">
-          <div class="section-title">Evrenler</div>
+        <div class="section-header" style="padding-left:0; margin-top:32px">
+          <div class="section-title">İlerleme Durumu</div>
         </div>
-        <div class="portal-grid" id="portal-grid">
-          <!-- Universe cards will be injected here via JS -->
-        </div>
-  </div>
-  </section>
+        <div id="stats-universe-breakdown"></div>
+      </section>
 
-  <!-- UNIVERSE / LIST VIEW -->
-  <section id="view-universe-wrapper" class="view">
-    <div class="universe-detail-header">
-      <div class="detail-header-top">
-        <button id="btn-back" class="btn-back" onclick="hideUniverseDetail()" aria-label="Geri dön"
-          title="Ana sayfaya dön">‹</button>
-        <div class="detail-title-wrap">
-          <div id="detail-universe-name" class="detail-universe-name"></div>
-          <div id="detail-universe-progress" class="detail-universe-progress"></div>
-        </div>
-      </div>
-      <div class="detail-progress-bar">
-        <div id="detail-progress-fill" class="detail-progress-bar-fill" style="width:0%"></div>
-      </div>
-      <div id="filter-tabs" class="filter-tabs"></div>
-    </div>
-    <div id="movies-grid" class="movies-grid">
-      <!-- Movie cards will be injected here -->
-    </div>
-  </section>
+    </main>
 
-  <!-- STATS VIEW -->
-  <section id="view-stats" class="view stats-view">
-    <div class="stats-title">📊 İstatistikler</div>
-    <div class="stats-grid">
-      <div class="stats-detail-card">
-        <div class="big-number" id="stats-done-count" style="color: var(--accent-blue)">—</div>
-        <div class="label">İzlenen</div>
+    <!-- ========== NAVIGATION ========== -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" data-view="home" id="nav-home">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Portal</span>
       </div>
-      <div class="stats-detail-card">
-        <div class="big-number" id="stats-total-count" style="color: var(--accent-purple)">—</div>
-        <div class="label">Toplam</div>
+      <div class="nav-item" data-view="stats" id="nav-stats">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">İstatistik</span>
       </div>
-    </div>
-
-    <!-- Universe Mastery Metrics -->
-    <div id="stats-mastery-container" class="mastery-section" style="margin-top: 32px; padding: 0 20px;">
-      <div class="section-header" style="padding-left:0; margin-bottom:16px">
-        <div class="section-title" style="font-size:16px">🏆 Evren Ustalığı</div>
-      </div>
-      <div id="mastery-grid" class="mastery-grid"
-        style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px;">
-        <!-- Mastery cards injected here -->
-      </div>
-    </div>
-    <div class="section-header" style="padding-left:0; margin-top:32px">
-      <div class="section-title">İlerleme Durumu</div>
-    </div>
-    <div id="stats-universe-breakdown"></div>
-  </section>
-
-  </main>
-
-  <!-- ========== NAVIGATION ========== -->
-  <nav class="bottom-nav">
-    <div class="nav-item active" data-view="home" id="nav-home">
-      <span class="nav-icon">🏠</span>
-      <span class="nav-label">Portal</span>
-    </div>
-    <div class="nav-item" data-view="stats" id="nav-stats">
-      <span class="nav-icon">📊</span>
-      <span class="nav-label">İstatistik</span>
-    </div>
-  </nav>
+    </nav>
   </div>
 
   </div>
