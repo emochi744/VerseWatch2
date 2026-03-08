@@ -12,6 +12,24 @@ let modalTmdbData = null;
 let currentView = 'home'; // home | stats
 let posterCache = {}; // { itemId: tmdbData }
 
+// User Feedback Storage Helpers
+const getRatings = () => JSON.parse(localStorage.getItem('versewatch_ratings') || '{}');
+const getComments = () => JSON.parse(localStorage.getItem('versewatch_comments') || '{}');
+
+const saveRating = (itemId, rating) => {
+    const r = getRatings();
+    if (rating === 0) delete r[itemId];
+    else r[itemId] = rating;
+    localStorage.setItem('versewatch_ratings', JSON.stringify(r));
+};
+
+const saveComment = (itemId, comment) => {
+    const c = getComments();
+    if (!comment.trim()) delete c[itemId];
+    else c[itemId] = comment;
+    localStorage.setItem('versewatch_comments', JSON.stringify(c));
+};
+
 // ============================================
 // DOM REFS
 // ============================================
@@ -264,9 +282,12 @@ function createMovieCard(item, idx) {
         ? `<img class="movie-poster" src="${tmdb.posterUrl}" alt="${item.title}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'movie-poster-placeholder\\' style=\\'background: ${item.posterCss || '#333'}\\'></div>'">`
         : `<div class="movie-poster-placeholder" style="background: ${item.posterCss || '#333'}"><div class="ph-text">${escHtml(item.title)}</div></div>`;
 
+    const userRating = getRatings()[item.id];
+
     card.innerHTML = `
     ${posterHtml}
     <div class="type-badge ${item.type}">${item.type === 'series' ? 'Dizi' : 'Film'}</div>
+    ${userRating ? `<div class="user-rating-badge">⭐ ${userRating}</div>` : ''}
     <div class="watched-badge">✓</div>
     <div class="movie-overlay">
       <div class="movie-title-overlay">${escHtml(item.title)}</div>
@@ -383,6 +404,43 @@ function setupModal() {
     });
     $('modal-close-btn').addEventListener('click', closeModal);
     $('modal-watch-btn').addEventListener('click', toggleWatchModal);
+
+    // Comment listener
+    $('modal-comment-text').addEventListener('input', (e) => {
+        if (modalItem) saveComment(modalItem.id, e.target.value);
+    });
+}
+
+function renderModalStars(currentRating) {
+    const container = $('modal-rating-stars');
+    container.innerHTML = '';
+    for (let i = 1; i <= 10; i++) {
+        const star = document.createElement('span');
+        star.className = `star-rating ${i <= currentRating ? 'active' : ''}`;
+        star.innerHTML = '★';
+        star.addEventListener('click', () => {
+            const newRating = i === currentRating ? 0 : i;
+            saveRating(modalItem.id, newRating);
+            renderModalStars(newRating);
+            // Update card in grid
+            const card = $(`card-${modalItem.id}`);
+            if (card) {
+                const badge = card.querySelector('.user-rating-badge');
+                if (newRating > 0) {
+                    if (badge) badge.textContent = `⭐ ${newRating}`;
+                    else {
+                        const newBadge = document.createElement('div');
+                        newBadge.className = 'user-rating-badge';
+                        newBadge.textContent = `⭐ ${newRating}`;
+                        card.insertBefore(newBadge, card.querySelector('.watched-badge'));
+                    }
+                } else if (badge) {
+                    badge.remove();
+                }
+            }
+        });
+        container.appendChild(star);
+    }
 }
 
 async function openModal(item) {
@@ -436,6 +494,12 @@ async function openModal(item) {
             `<span class="genre-tag">${g}</span>`
         ).join('');
     }
+
+    // Initialize User Feedback
+    const userRating = getRatings()[item.id] || 0;
+    const userComment = getComments()[item.id] || '';
+    renderModalStars(userRating);
+    $('modal-comment-text').value = userComment;
 }
 
 function closeModal() {

@@ -352,6 +352,51 @@ const UNIVERSES = [
                 "tmdbId": 986056,
                 "imdbId": "tt20986658",
                 "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-39",
+                "title": "The Guardians of the Galaxy Holiday Special",
+                "year": 2022,
+                "type": "movie",
+                "tmdbId": 774752,
+                "imdbId": "tt13623136",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-40",
+                "title": "Werewolf by Night",
+                "year": 2022,
+                "type": "movie",
+                "tmdbId": 927214,
+                "imdbId": "tt15366746",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-41",
+                "title": "Secret Invasion",
+                "year": 2023,
+                "type": "series",
+                "tmdbId": 114479,
+                "imdbId": "tt13143964",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-42",
+                "title": "Echo",
+                "year": 2024,
+                "type": "series",
+                "tmdbId": 118956,
+                "imdbId": "tt15147414",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-43",
+                "title": "Agatha All Along",
+                "year": 2024,
+                "type": "series",
+                "tmdbId": 138502,
+                "imdbId": "tt15562104",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
             }
         ]
     },

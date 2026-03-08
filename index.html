@@ -174,7 +174,22 @@
         </div>
         <div id="modal-genres" class="modal-genres"></div>
         <p id="modal-overview" class="modal-overview"></p>
-        <button id="modal-watch-btn" class="btn-watch-toggle unwatched">
+
+        <!-- Rating & Comments -->
+        <div class="user-feedback-section">
+          <div class="section-title"
+            style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; color:var(--text-secondary)">
+            Senin Puanın</div>
+          <div class="rating-bar" id="modal-rating-stars">
+            <!-- Stars will be injected here -->
+          </div>
+          <div class="comment-input-wrap">
+            <textarea id="modal-comment-text" class="comment-textarea"
+              placeholder="Bu yapımla ilgili notların..."></textarea>
+          </div>
+        </div>
+
+        <button id="modal-watch-btn" class="btn-watch-toggle unwatched" style="margin-top:24px">
           <span>▶</span>
           <span class="toggle-text">İzledim olarak işaretle</span>
         </button>
