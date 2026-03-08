@@ -180,10 +180,10 @@ function switchView(view) {
 // HOME / PORTAL VIEW
 // ============================================
 function renderHomeView() {
-    renderGlobalStats();
-    updateLevelUI();
-    renderRecentlyWatched();
-    renderPortalGrid();
+    try { renderGlobalStats(); } catch (e) { console.warn('Global stats failed:', e); }
+    try { updateLevelUI(); } catch (e) { console.warn('Level UI failed:', e); }
+    try { renderRecentlyWatched(); } catch (e) { console.warn('Recent panel failed:', e); }
+    try { renderPortalGrid(); } catch (e) { console.warn('Portal grid failed:', e); }
 }
 
 function renderRecentlyWatched() {
