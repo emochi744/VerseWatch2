@@ -359,21 +359,22 @@ async function preloadAllUniverses() {
         img.src = url;
     };
 
-    // 1. Prioritize Portal/Home background images
-    for (const universe of UNIVERSES) {
+    // 1. Parallelize Portal/Home background metadata & images
+    await Promise.all(UNIVERSES.map(async universe => {
         const firstItem = universe.items[0];
-        const data = await getMovieDetails(firstItem?.tmdbId, firstItem?.type);
+        if (!firstItem) return;
+        const data = await getMovieDetails(firstItem.tmdbId, firstItem.type);
         if (data) {
             posterCache[firstItem.id] = data;
             prefetchImage(data.backdropUrl);
             prefetchImage(data.posterUrl);
         }
-    }
-    renderPortalGrid(); // Update cards with backdrops immediately
+    }));
+    renderPortalGrid(); // Render all portals immediately as soon as metadata is ready
 
-    // 2. Preload everything else in background batches
+    // 2. Parallelize everything else in large batches
     for (const universe of UNIVERSES) {
-        const BATCH = 5;
+        const BATCH = 15; // Increased from 5 to 15
         for (let i = 0; i < universe.items.length; i += BATCH) {
             const batch = universe.items.slice(i, i + BATCH);
             await Promise.all(batch.map(async item => {
@@ -388,9 +389,8 @@ async function preloadAllUniverses() {
                     if (currentUniverseId === universe.id) updateMovieCard(item);
                 }
             }));
-            await new Promise(r => setTimeout(r, 150));
+            // No more delays between batches - full speed ahead
         }
-        await new Promise(r => setTimeout(r, 300));
     }
 }
 

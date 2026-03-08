@@ -21,16 +21,22 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Dynamic cache for proxy images (wsrv.nl)
+    // Dynamic cache for proxy images (wsrv.nl) - STRIKT CACHE-FIRST
     if (url.hostname === 'wsrv.nl') {
         event.respondWith(
-            caches.open('versewatch-images').then(cache => {
-                return cache.match(event.request).then(response => {
-                    return response || fetch(event.request).then(networkResponse => {
+            caches.open('versewatch-images').then(async cache => {
+                const cachedResponse = await cache.match(event.request);
+                if (cachedResponse) return cachedResponse;
+
+                try {
+                    const networkResponse = await fetch(event.request);
+                    if (networkResponse.ok) {
                         cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
-                    });
-                });
+                    }
+                    return networkResponse;
+                } catch (e) {
+                    return null;
+                }
             })
         );
         return;

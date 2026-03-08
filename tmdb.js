@@ -138,8 +138,8 @@ async function getMovieDetails(tmdbId, type = 'movie') {
                 title: tmdbData.title || tmdbData.name || titleToSearch,
                 originalTitle: tmdbData.original_title || tmdbData.original_name,
                 overview: tmdbData.overview || '',
-                posterUrl: tmdbData.poster_path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${POSTER_SIZE}${tmdbData.poster_path}` : null,
-                backdropUrl: tmdbData.backdrop_path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${BACKDROP_SIZE}${tmdbData.backdrop_path}` : null,
+                posterUrl: tmdbData.poster_path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${POSTER_SIZE}${tmdbData.poster_path}&output=webp&n=1&q=70` : null,
+                backdropUrl: tmdbData.backdrop_path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${BACKDROP_SIZE}${tmdbData.backdrop_path}&output=webp&n=1&q=70` : null,
                 rating: tmdbData.vote_average ? parseFloat(tmdbData.vote_average.toFixed(1)) : 0,
                 releaseDate: tmdbData.release_date || tmdbData.first_air_date,
                 runtime: tmdbData.runtime || (tmdbData.episode_run_time ? tmdbData.episode_run_time[0] : null) || 120,
@@ -238,5 +238,5 @@ async function searchTMDB(query) {
 
 function posterUrl(path, size = POSTER_SIZE) {
     // If TMDB works somehow, try to fetch it over HTTP proxy
-    return path ? `http://wsrv.nl/?url=image.tmdb.org/t/p/${size}${path}` : null;
+    return path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${size}${path}&output=webp&n=1&q=70` : null;
 }
