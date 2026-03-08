@@ -2,7 +2,7 @@
     "name": "VerseWatch",
     "short_name": "VerseWatch",
     "description": "Premium Movie & Series Universe Tracker",
-    "start_url": "./index.html",
+    "start_url": "index.html",
     "display": "standalone",
     "background_color": "#0d0d1a",
     "theme_color": "#00d4ff",
