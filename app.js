@@ -410,12 +410,12 @@ function updateMovieCard(item) {
     card.classList.toggle('watched', watched);
     card.classList.remove('movie-skeleton');
 
-    if (tmdb && tmdb.posterUrl) {
+    if (tmdb && (tmdb.thumbUrl || tmdb.posterUrl)) {
         const existing = card.querySelector('.movie-poster-placeholder');
         if (existing) {
             const img = document.createElement('img');
             img.className = 'movie-poster';
-            img.src = tmdb.posterUrl;
+            img.src = tmdb.thumbUrl || tmdb.posterUrl;
             img.alt = item.title;
             img.loading = 'lazy';
             img.onerror = function () {
