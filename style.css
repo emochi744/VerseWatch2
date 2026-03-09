@@ -15,14 +15,20 @@
 
   --accent-blue: #00d4ff;
   --accent-purple: #9d50bb;
-  --accent-nebula: linear-gradient(135deg, #00d4ff 0%, #9d50bb 100%);
+  --accent-nebula: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
 
   --text-primary: #ffffff;
   --text-secondary: #b0b0cc;
   --text-muted: #5e5e7a;
 
-  --watched-color: #00f2ea;
+  --watched-color: var(--accent-blue);
   --unwatched-color: rgba(255, 255, 255, 0.08);
+
+  /* THEME OVERRIDES */
+  --theme-color-main: var(--accent-purple);
+  --theme-color-secondary: var(--accent-blue);
+  --theme-color-bg: rgba(124, 58, 237, 0.15);
+  /* Adjust opacity of main based on theme */
 
   --radius-sm: 8px;
   --radius-md: 16px;
@@ -71,6 +77,31 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   position: relative;
+}
+
+/* THEME CLASSES */
+body.theme-purple {
+  --theme-color-main: #7c3aed;
+  --theme-color-secondary: #9d50bb;
+  --theme-color-bg: rgba(124, 58, 237, 0.15);
+}
+
+body.theme-green {
+  --theme-color-main: #10b981;
+  --theme-color-secondary: #059669;
+  --theme-color-bg: rgba(16, 185, 129, 0.15);
+}
+
+body.theme-blue {
+  --theme-color-main: #3b82f6;
+  --theme-color-secondary: #2563eb;
+  --theme-color-bg: rgba(59, 130, 246, 0.15);
+}
+
+body.theme-red {
+  --theme-color-main: #ef4444;
+  --theme-color-secondary: #f43f5e;
+  --theme-color-bg: rgba(239, 68, 68, 0.15);
 }
 
 /* Rating & Comments UI */

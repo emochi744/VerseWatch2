@@ -5,9 +5,9 @@ const TMDB_APIKEY_STORAGE = 'versewatch_tmdb_key';
 
 // We will use multiple fallback proxies to ensure at least one works
 const PROXIES = [
-    'https://api.allorigins.win/raw?url=',
-    'https://thingproxy.freeboard.io/fetch/',
-    'https://cors-anywhere.herokuapp.com/' // often rate limited, but still a fallback
+    'https://api.allorigins.win/get?url=',
+    'https://api.codetabs.com/v1/proxy?quest=',
+    'https://corsproxy.io/?'
 ];
 
 // Fallback OMDB API Key (Open Movie Database)
@@ -15,6 +15,7 @@ const OMDB_KEY = 'apikey=trilogy';
 
 const TMDB_CACHE_KEY = 'versewatch_tmdb_cache';
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+const TMDB_IMG_BASE = 'https://wsrv.nl/?url=image.tmdb.org/t/p/';
 
 const DEFAULT_TMDB_KEY = 'bc78ecfd551f6db67e54c479bc569947'; // User's private key
 
@@ -54,12 +55,22 @@ async function fetchWithFallback(urlStr) {
     try {
         const proxyUrl = PROXIES[0] + encodeURIComponent(urlStr);
         const res = await fetch(proxyUrl);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.contents) return JSON.parse(data.contents);
+        }
+    } catch (e) { /* ignore */ }
+
+    // Try codetabs proxy
+    try {
+        const proxyUrl = PROXIES[1] + encodeURIComponent(urlStr);
+        const res = await fetch(proxyUrl);
         if (res.ok) return res.json();
     } catch (e) { /* ignore */ }
 
-    // Try thingproxy
+    // Try corsproxy.io
     try {
-        const proxyUrl = PROXIES[1] + encodeURIComponent(urlStr);
+        const proxyUrl = PROXIES[2] + encodeURIComponent(urlStr);
         const res = await fetch(proxyUrl);
         if (res.ok) return res.json();
     } catch (e) {
@@ -130,7 +141,8 @@ async function getMovieDetails(tmdbId, type = 'movie') {
 
     // 1. Try TMDB First
     if (tmdbKey && tmdbKey.length > 8 && tmdbId) {
-        let tmdbUrl = `https://api.themoviedb.org/3/${type}/${tmdbId}?api_key=${tmdbKey}&language=tr-TR`;
+        let tmdbType = type === 'series' ? 'tv' : 'movie';
+        let tmdbUrl = `https://api.themoviedb.org/3/${tmdbType}/${tmdbId}?api_key=${tmdbKey}&language=tr-TR`;
         let tmdbData = await fetchWithFallback(tmdbUrl);
 
         if (tmdbData && tmdbData.id) {
@@ -234,6 +246,30 @@ async function searchTMDB(query) {
             }));
     } catch (e) {
         console.warn('Search failed:', e);
+        return [];
+    }
+}
+
+async function fetchPopularTMDB() {
+    try {
+        const data = await fetchTMDB('/trending/all/day', { language: 'tr-TR' });
+        return (data.results || [])
+            .filter(r => r.media_type === 'movie' || r.media_type === 'tv')
+            .slice(0, 12)
+            .map(r => ({
+                id: `popular-${r.id}`,
+                tmdbId: r.id,
+                title: r.title || r.name,
+                year: (r.release_date || r.first_air_date || '').slice(0, 4),
+                type: r.media_type === 'tv' ? 'series' : 'movie',
+                posterUrl: r.poster_path ? `${TMDB_IMG_BASE}${POSTER_SIZE}${r.poster_path}` : null,
+                backdropUrl: r.backdrop_path ? `${TMDB_IMG_BASE}${BACKDROP_SIZE}${r.backdrop_path}` : null,
+                rating: Math.round((r.vote_average || 0) * 10) / 10,
+                overview: r.overview,
+                posterCss: 'linear-gradient(135deg, #2a2a3a, #1a1a2a)' // fallback
+            }));
+    } catch (e) {
+        console.warn('Popular fetch failed:', e);
         return [];
     }
 }

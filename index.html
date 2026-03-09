@@ -72,6 +72,9 @@
               style="width:100px;height:100px;border-radius:24px;box-shadow:var(--shadow-glow)">
             <h1 class="portal-title" style="margin-top:20px;font-size:32px">VerseWatch</h1>
             <p class="portal-subtitle">Sinematik Evren Portalı</p>
+            <button id="btn-random-suggest" class="btn-icon"
+              style="margin-top: 16px; padding: 10px 20px; border-radius: 20px; background: rgba(124, 58, 237, 0.2); color: #fff; font-weight: 600; border: 1px solid rgba(124, 58, 237, 0.5); width: auto;">🎲
+              Ne İzlesem?</button>
           </div>
 
           <!-- Global Stats -->
@@ -115,6 +118,16 @@
             </div>
           </div>
 
+          <!-- Watchlist Panel -->
+          <div id="watchlist-panel" class="recent-section" style="display: none;">
+            <div class="section-header" style="padding-left:0; margin-bottom:12px">
+              <div class="section-title" style="font-size:16px">🔖 İzleme Listem</div>
+            </div>
+            <div id="watchlist-scroll" class="recent-scroll">
+              <!-- Watchlist items injected here -->
+            </div>
+          </div>
+
           <div class="section-header" style="padding-left:0">
             <div class="section-title">Evrenler</div>
           </div>
@@ -145,6 +158,28 @@
         </div>
       </section>
 
+      <!-- POPULAR VIEW -->
+      <section id="view-popular" class="view popular-view">
+
+        <!-- Upcoming Releases -->
+        <div id="upcoming-panel" class="recent-section" style="margin-top:24px; display:none;">
+          <div class="section-header" style="padding-left:0; margin-bottom:12px">
+            <div class="section-title" style="font-size:16px">⏳ Yakında Vizyonda</div>
+          </div>
+          <div id="upcoming-scroll" class="recent-scroll">
+            <!-- Upcoming cards injected here -->
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-top: 24px;">
+          <div class="section-title">🔥 Popüler & Trendler</div>
+        </div>
+        <div id="popular-grid" class="movies-grid">
+          <!-- Loaded from TMDB -->
+          <div class="loading-spinner" style="grid-column: 1 / -1; margin: 40px auto;"></div>
+        </div>
+      </section>
+
       <!-- STATS VIEW -->
       <section id="view-stats" class="view stats-view">
         <div class="stats-title">📊 İstatistikler</div>
@@ -156,6 +191,23 @@
           <div class="stats-detail-card">
             <div class="big-number" id="stats-total-count" style="color: var(--accent-purple)">—</div>
             <div class="label">Toplam</div>
+          </div>
+        </div>
+
+        <!-- Theme Options -->
+        <div class="theme-section" style="margin-top: 32px; padding: 0 20px;">
+          <div class="section-header" style="padding-left:0; margin-bottom:12px">
+            <div class="section-title" style="font-size:16px">🎨 Tema Seçimi</div>
+          </div>
+          <div style="display: flex; gap: 16px;">
+            <button class="theme-btn" data-theme="theme-purple"
+              style="width:40px;height:40px;border-radius:50%;border:2px solid #fff;background:#7c3aed;cursor:pointer;"></button>
+            <button class="theme-btn" data-theme="theme-green"
+              style="width:40px;height:40px;border-radius:50%;border:2px solid transparent;background:#10b981;cursor:pointer;"></button>
+            <button class="theme-btn" data-theme="theme-blue"
+              style="width:40px;height:40px;border-radius:50%;border:2px solid transparent;background:#3b82f6;cursor:pointer;"></button>
+            <button class="theme-btn" data-theme="theme-red"
+              style="width:40px;height:40px;border-radius:50%;border:2px solid transparent;background:#ef4444;cursor:pointer;"></button>
           </div>
         </div>
 
@@ -182,6 +234,10 @@
       <div class="nav-item active" data-view="home" id="nav-home">
         <span class="nav-icon">🏠</span>
         <span class="nav-label">Portal</span>
+      </div>
+      <div class="nav-item" data-view="popular" id="nav-popular">
+        <span class="nav-icon">🔥</span>
+        <span class="nav-label">Popüler</span>
       </div>
       <div class="nav-item" data-view="stats" id="nav-stats">
         <span class="nav-icon">📊</span>
@@ -229,10 +285,49 @@
           </div>
         </div>
 
-        <button id="modal-watch-btn" class="btn-watch-toggle unwatched" style="margin-top:24px">
-          <span>▶</span>
-          <span class="toggle-text">İzledim olarak işaretle</span>
-        </button>
+        <!-- Series Tracker (Hidden by default) -->
+        <div id="modal-series-tracker"
+          style="display: none; background: rgba(255,255,255,0.03); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); margin-top: 16px;">
+          <div class="section-title"
+            style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; color:var(--text-secondary)">
+            Dizi Takibi</div>
+          <div style="display: flex; gap: 12px; justify-content: space-between;">
+            <div
+              style="flex:1; display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
+              <button id="btn-season-minus" class="btn-icon"
+                style="width:28px; height:28px; border-radius:6px; font-size:16px;">-</button>
+              <div style="text-align:center;">
+                <div style="font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Sezon
+                </div>
+                <div id="tracker-season-val" style="font-size:16px; font-weight:700;">1</div>
+              </div>
+              <button id="btn-season-plus" class="btn-icon"
+                style="width:28px; height:28px; border-radius:6px; font-size:16px;">+</button>
+            </div>
+            <div
+              style="flex:1; display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border);">
+              <button id="btn-episode-minus" class="btn-icon"
+                style="width:28px; height:28px; border-radius:6px; font-size:16px;">-</button>
+              <div style="text-align:center;">
+                <div style="font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Bölüm
+                </div>
+                <div id="tracker-episode-val" style="font-size:16px; font-weight:700;">1</div>
+              </div>
+              <button id="btn-episode-plus" class="btn-icon"
+                style="width:28px; height:28px; border-radius:6px; font-size:16px;">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+          <button id="modal-watch-btn" class="btn-watch-toggle unwatched" style="flex: 1; margin: 0;">
+            <span>▶</span>
+            <span class="toggle-text">İzledim olarak işaretle</span>
+          </button>
+          <button id="modal-watchlist-btn" class="btn-icon"
+            style="width: 48px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--glass-border); color: var(--text-secondary);"
+            title="Listeme Ekle">🔖</button>
+        </div>
         <br><br>
         <button id="modal-close-btn" class="btn-icon"
           style="width:100%;border-radius:var(--radius-md);height:44px;font-size:14px;color:var(--text-muted)"

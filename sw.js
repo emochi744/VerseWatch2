@@ -1,5 +1,5 @@
 // VerseWatch Service Worker
-const CACHE_NAME = 'versewatch-v2';
+const CACHE_NAME = 'versewatch-v8';
 const ASSETS = [
     './',
     './index.html',

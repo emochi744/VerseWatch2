@@ -24,6 +24,18 @@ const saveRating = (itemId, rating) => {
     localStorage.setItem('versewatch_ratings', JSON.stringify(r));
 };
 
+const getEpisodes = () => JSON.parse(localStorage.getItem('versewatch_episodes') || '{}');
+
+const saveEpisodeProgress = (itemId, season, episode) => {
+    const ep = getEpisodes();
+    if (season === 0 && episode === 0) {
+        delete ep[itemId];
+    } else {
+        ep[itemId] = { season, episode };
+    }
+    localStorage.setItem('versewatch_episodes', JSON.stringify(ep));
+};
+
 const saveComment = (itemId, comment) => {
     const c = getComments();
     if (!comment.trim()) delete c[itemId];
@@ -35,6 +47,12 @@ const addToRecent = (itemId) => {
     let recent = getRecent();
     recent = [itemId, ...recent.filter(id => id !== itemId)].slice(0, 10);
     localStorage.setItem('versewatch_recent', JSON.stringify(recent));
+};
+
+const getTheme = () => localStorage.getItem('versewatch_theme') || 'theme-purple';
+const saveTheme = (themeClass) => {
+    localStorage.setItem('versewatch_theme', themeClass);
+    document.body.className = themeClass;
 };
 
 // ============================================
@@ -83,6 +101,24 @@ function updateLevelUI() {
         $('level-xp-text').textContent = `${totalWatched} İzleme (MAX)`;
         $('level-percent').textContent = '%100';
     }
+}
+
+function suggestRandomItem() {
+    const watched = getWatched();
+    const unwatchedItems = [];
+    UNIVERSES.forEach(u => {
+        u.items.forEach(item => {
+            if (!watched[item.id]) unwatchedItems.push(item);
+        });
+    });
+
+    if (unwatchedItems.length === 0) {
+        showToast('İzlenecek hiçbir şey kalmadı, efsanesin!', 'success');
+        return;
+    }
+
+    const rand = unwatchedItems[Math.floor(Math.random() * unwatchedItems.length)];
+    openModal(rand);
 }
 
 // ============================================
@@ -136,6 +172,15 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSearch();
     setupModal();
 
+    // Init Theme and Random Button
+    document.body.className = getTheme();
+    $$('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => saveTheme(btn.dataset.theme));
+    });
+
+    const btnRandom = $('btn-random-suggest');
+    if (btnRandom) btnRandom.addEventListener('click', suggestRandomItem);
+
     // Start preloading immediately
     preloadAllUniverses();
 
@@ -164,7 +209,10 @@ function setupNav() {
         });
     });
 
-    $('logo-home').addEventListener('click', () => switchView('home'));
+    $('logo-home').addEventListener('click', () => {
+        window.scrollTo(0, 0);
+        switchView('home');
+    });
 }
 
 function switchView(view) {
@@ -173,6 +221,7 @@ function switchView(view) {
 
     // Toggle main views
     $('view-home').classList.toggle('active', view === 'home');
+    $('view-popular').classList.toggle('active', view === 'popular');
     $('view-stats').classList.toggle('active', view === 'stats');
 
     // Always hide universe detail when switching main tabs
@@ -180,8 +229,66 @@ function switchView(view) {
     currentUniverseId = null;
 
     if (view === 'home') renderHomeView();
+    if (view === 'popular') renderPopularView();
     if (view === 'stats') renderStatsView();
 }
+
+async function renderPopularView() {
+    const grid = $('popular-grid');
+    const upcomingPanel = $('upcoming-panel');
+    const upcomingScroll = $('upcoming-scroll');
+
+    if (!grid) return;
+
+    // Load only once
+    if (grid.dataset.loaded === 'true') return;
+    grid.dataset.loaded = 'true';
+
+    // Fetch both popular and upcoming concurrently
+    const [popularItems, upcomingItems] = await Promise.all([
+        fetchPopularTMDB(),
+        fetchUpcomingTMDB()
+    ]);
+
+    // Render Upcoming
+    if (upcomingItems && upcomingItems.length > 0) {
+        upcomingPanel.style.display = 'block';
+        upcomingScroll.innerHTML = '';
+        upcomingItems.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'recent-card';
+
+            const releaseText = new Date(item.releaseDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+
+            card.innerHTML = `
+                <img src="${item.posterUrl}" alt="${escHtml(item.title)}" loading="lazy">
+                <div class="recent-info">
+                    <div class="recent-title">${escHtml(item.title)}</div>
+                    <div class="recent-meta" style="color:var(--accent-blue)">${releaseText} ${item.year}</div>
+                </div>
+            `;
+            // Re-use logic to open modal (store data in posterCache)
+            posterCache[item.id] = Object.assign({}, item);
+            card.addEventListener('click', () => openModal(item));
+            upcomingScroll.appendChild(card);
+        });
+    }
+
+    // Render Popular
+    if (popularItems.length === 0) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">İçerikler yüklenemedi.</div>';
+        return;
+    }
+
+    grid.innerHTML = '';
+    popularItems.forEach(item => {
+        posterCache[item.id] = item; // Store full TMDB data
+        const card = createMovieCard(item);
+        grid.appendChild(card);
+    });
+}
+
+
 
 // ============================================
 // HOME / PORTAL VIEW
@@ -190,6 +297,7 @@ function renderHomeView() {
     try { renderGlobalStats(); } catch (e) { console.warn('Global stats failed:', e); }
     try { updateLevelUI(); } catch (e) { console.warn('Level UI failed:', e); }
     try { renderRecentlyWatched(); } catch (e) { console.warn('Recent panel failed:', e); }
+    try { renderWatchlist(); } catch (e) { console.warn('Watchlist panel failed:', e); }
     try { renderPortalGrid(); } catch (e) { console.warn('Portal grid failed:', e); }
 }
 
@@ -223,6 +331,48 @@ function renderRecentlyWatched() {
             card.innerHTML = `<img src="${tmdb.posterUrl}" alt="${foundItem.title}">`;
         } else {
             card.innerHTML = `<div class="movie-poster-placeholder" style="background:${foundItem.posterCss || '#333'}"><div class="ph-text" style="font-size:10px">${foundItem.title}</div></div>`;
+        }
+
+        card.addEventListener('click', () => openModal(foundItem));
+        container.appendChild(card);
+    });
+}
+
+function renderWatchlist() {
+    const container = $('watchlist-scroll');
+    const panel = $('watchlist-panel');
+    const watchlistIds = getWatchlist();
+
+    if (watchlistIds.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'block';
+    container.innerHTML = '';
+
+    watchlistIds.forEach(id => {
+        // Find item in UNIVERSES
+        let foundItem = null;
+        for (const u of UNIVERSES) {
+            foundItem = u.items.find(i => i.id === id);
+            if (foundItem) break;
+        }
+
+        // If it's a popular item (not in predefined universes) it won't be found this way cleanly, 
+        // but for now, we rely on the universe logic. Popular items might need separate handling later.
+        if (!foundItem) return;
+
+        const tmdb = posterCache[id];
+        const card = document.createElement('div');
+        card.className = 'recent-card'; // Reuse recent card styling
+
+        if (tmdb && tmdb.posterUrl) {
+            card.innerHTML = `<img src="${tmdb.posterUrl}" alt="${foundItem.title}">
+                              <div style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:10px;font-size:10px;border:1px solid var(--glass-border)">🔖</div>`;
+        } else {
+            card.innerHTML = `<div class="movie-poster-placeholder" style="background:${foundItem.posterCss || '#333'}"><div class="ph-text" style="font-size:10px">${foundItem.title}</div></div>
+                              <div style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.7);padding:2px 6px;border-radius:10px;font-size:10px;border:1px solid var(--glass-border)">🔖</div>`;
         }
 
         card.addEventListener('click', () => openModal(foundItem));
@@ -505,10 +655,45 @@ function setupModal() {
     $('modal-close-btn').addEventListener('click', closeModal);
     $('modal-watch-btn').addEventListener('click', toggleWatchModal);
 
+    const watchListBtn = $('modal-watchlist-btn');
+    if (watchListBtn) watchListBtn.addEventListener('click', toggleWatchlistModal);
+
     // Comment listener
     $('modal-comment-text').addEventListener('input', (e) => {
         if (modalItem) saveComment(modalItem.id, e.target.value);
     });
+
+    // Episode tracker listeners
+    $('btn-season-plus').addEventListener('click', () => updateEpisodeTracker('season', 1));
+    $('btn-season-minus').addEventListener('click', () => updateEpisodeTracker('season', -1));
+    $('btn-episode-plus').addEventListener('click', () => updateEpisodeTracker('episode', 1));
+    $('btn-episode-minus').addEventListener('click', () => updateEpisodeTracker('episode', -1));
+}
+
+function updateEpisodeTracker(type, delta) {
+    if (!modalItem || modalItem.type !== 'series') return;
+    const ep = getEpisodes()[modalItem.id] || { season: 1, episode: 1 };
+
+    if (type === 'season') {
+        ep.season = Math.max(1, ep.season + delta);
+    } else {
+        ep.episode = Math.max(1, ep.episode + delta);
+    }
+
+    saveEpisodeProgress(modalItem.id, ep.season, ep.episode);
+    $('tracker-season-val').textContent = ep.season;
+    $('tracker-episode-val').textContent = ep.episode;
+}
+
+function toggleWatchlistModal() {
+    if (!modalItem) return;
+    const isNowInWatchlist = toggleWatchlist(modalItem.id);
+    updateModalWatchlistBtn(modalItem);
+    renderWatchlist();
+
+    showToast(isNowInWatchlist
+        ? `🔖 "${modalItem.title}" listene eklendi!`
+        : `"${modalItem.title}" listenden çıkarıldı.`, 'info');
 }
 
 function renderModalStars(currentRating) {
@@ -537,6 +722,11 @@ function renderModalStars(currentRating) {
             const newRating = clickedVal === currentRating ? 0 : clickedVal;
             saveRating(modalItem.id, newRating);
             renderModalStars(newRating);
+
+            // Auto-check watched
+            if (newRating > 0 && !isWatched(modalItem.id)) {
+                toggleWatchModal();
+            }
 
             // Update card in grid
             const card = $(`card-${modalItem.id}`);
@@ -574,6 +764,18 @@ async function openModal(item) {
     $('modal-backdrop-container').innerHTML = `<div class="modal-backdrop-placeholder"></div>`;
 
     updateModalWatchBtn(item);
+    updateModalWatchlistBtn(item);
+
+    const trackerUI = $('modal-series-tracker');
+    if (item.type === 'series') {
+        trackerUI.style.display = 'block';
+        const epData = getEpisodes()[item.id] || { season: 1, episode: 1 };
+        $('tracker-season-val').textContent = epData.season;
+        $('tracker-episode-val').textContent = epData.episode;
+    } else {
+        trackerUI.style.display = 'none';
+    }
+
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
 
@@ -633,6 +835,16 @@ function updateModalWatchBtn(item) {
     btn.innerHTML = watched
         ? `<span>✓</span><span class="toggle-text">İzlendi — Geri al</span>`
         : `<span>▶</span><span class="toggle-text">İzledim olarak işaretle</span>`;
+}
+
+function updateModalWatchlistBtn(item) {
+    const btn = $('modal-watchlist-btn');
+    if (!btn) return;
+    const inWatchlist = getWatchlist().includes(item.id);
+    btn.style.background = inWatchlist ? 'rgba(124, 58, 237, 0.2)' : 'var(--bg-card)';
+    btn.style.color = inWatchlist ? 'var(--accent-purple)' : 'var(--text-secondary)';
+    btn.style.borderColor = inWatchlist ? 'rgba(124, 58, 237, 0.5)' : 'var(--glass-border)';
+    btn.innerHTML = inWatchlist ? '🔖' : '🔖';
 }
 
 function toggleWatchModal() {
