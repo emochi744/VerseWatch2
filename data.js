@@ -1176,34 +1176,3 @@ const UNIVERSES = [
         ]
     }
 ];
-
-// Persistence helpers
-const STORAGE_KEY = 'versewatch_watched';
-
-function getWatched() {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    } catch { return {}; }
-}
-
-function setWatched(watched) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(watched));
-}
-
-function toggleWatched(itemId) {
-    const watched = getWatched();
-    watched[itemId] = !watched[itemId];
-    setWatched(watched);
-    return watched[itemId];
-}
-
-function isWatched(itemId) {
-    return !!getWatched()[itemId];
-}
-
-function getUniverseStats(universe) {
-    const watched = getWatched();
-    const total = universe.items.length;
-    const done = universe.items.filter(i => watched[i.id]).length;
-    return { total, done, percent: total > 0 ? Math.round((done / total) * 100) : 0 };
-}

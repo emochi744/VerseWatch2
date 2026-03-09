@@ -45,35 +45,44 @@ function setCache(cache) {
 }
 
 async function fetchWithFallback(urlStr) {
+    // Safe timeout wrapper using Promise.race
+    const fetchWithTimeout = (url, ms) => {
+        return Promise.race([
+            fetch(url),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+        ]);
+    };
+
     // Try without proxy first (in case it works)
     try {
-        const res = await fetch(urlStr);
-        if (res.ok) return res.json();
+        const res = await fetchWithTimeout(urlStr, 3000);
+        if (res.ok) return await res.json();
     } catch (e) { /* ignore */ }
 
-    // Try allorigins proxy
-    try {
-        const proxyUrl = PROXIES[0] + encodeURIComponent(urlStr);
-        const res = await fetch(proxyUrl);
-        if (res.ok) {
-            const data = await res.json();
-            if (data.contents) return JSON.parse(data.contents);
-        }
-    } catch (e) { /* ignore */ }
-
-    // Try codetabs proxy
+    // Try codetabs proxy FIRST (it works better without hanging)
     try {
         const proxyUrl = PROXIES[1] + encodeURIComponent(urlStr);
-        const res = await fetch(proxyUrl);
-        if (res.ok) return res.json();
-    } catch (e) { /* ignore */ }
+        const res = await fetchWithTimeout(proxyUrl, 6000);
+        if (res.ok) return await res.json();
+    } catch (e) { console.warn('Codetabs proxy failed', e); }
 
     // Try corsproxy.io
     try {
         const proxyUrl = PROXIES[2] + encodeURIComponent(urlStr);
-        const res = await fetch(proxyUrl);
-        if (res.ok) return res.json();
+        const res = await fetchWithTimeout(proxyUrl, 6000);
+        if (res.ok) return await res.json();
+    } catch (e) { console.warn('Corsproxy failed', e); }
+
+    // Try allorigins proxy as last resort because it timeout hangs
+    try {
+        const proxyUrl = PROXIES[0] + encodeURIComponent(urlStr);
+        const res = await fetchWithTimeout(proxyUrl, 8000);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.contents) return JSON.parse(data.contents);
+        }
     } catch (e) {
+        console.warn('Allorigins failed', e);
         throw new Error('All proxies failed or TMDB blocked.');
     }
 }
@@ -125,7 +134,7 @@ async function getMovieDetails(tmdbId, type = 'movie') {
     let yearToSearch = '';
     let imdbId = '';
     for (let u of UNIVERSES) {
-        const item = u.items.find(i => i.tmdbId == tmdbId);
+        const item = u.items.find(i => i.tmdbId == tmdbId || i.id == tmdbId);
         if (item) {
             titleToSearch = item.title;
             yearToSearch = item.year;
@@ -133,8 +142,6 @@ async function getMovieDetails(tmdbId, type = 'movie') {
             break;
         }
     }
-
-    if (!titleToSearch) return null;
 
     let parsed = null;
     const tmdbKey = getTMDBKey();
@@ -148,7 +155,7 @@ async function getMovieDetails(tmdbId, type = 'movie') {
         if (tmdbData && tmdbData.id) {
             parsed = {
                 id: tmdbData.id,
-                title: tmdbData.title || tmdbData.name || titleToSearch,
+                title: titleToSearch || tmdbData.title || tmdbData.name || 'Bilinmeyen Yapım',
                 originalTitle: tmdbData.original_title || tmdbData.original_name,
                 overview: tmdbData.overview || '',
                 posterUrl: tmdbData.poster_path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${POSTER_SIZE}${tmdbData.poster_path}&output=webp&n=1&q=70` : null,
@@ -173,13 +180,13 @@ async function getMovieDetails(tmdbId, type = 'movie') {
 
             parsed = {
                 id: tmdbId,
-                title: titleToSearch,
+                title: titleToSearch || omdbData.Title || 'Bilinmeyen Yapım',
                 originalTitle: omdbData.Title || titleToSearch,
-                overview: omdbData.Plot !== 'N/A' ? omdbData.Plot : `${titleToSearch} (${yearToSearch}) filmi/dizisi.`,
+                overview: omdbData.Plot !== 'N/A' ? omdbData.Plot : `${titleToSearch || omdbData.Title} (${yearToSearch || omdbData.Year}) filmi/dizisi.`,
                 posterUrl: posterUrl,
                 backdropUrl: null, // OMDB doesn't provide backdrops
                 rating: omdbData.imdbRating !== 'N/A' ? parseFloat(omdbData.imdbRating) : 0,
-                releaseDate: omdbData.Released !== 'N/A' ? omdbData.Released : `${yearToSearch}-01-01`,
+                releaseDate: omdbData.Released !== 'N/A' ? omdbData.Released : `${yearToSearch || '2000'}-01-01`,
                 runtime: omdbData.Runtime !== 'N/A' ? parseInt(omdbData.Runtime) : 120,
                 genres: omdbData.Genre ? omdbData.Genre.split(', ') : ['Aksiyon', 'Bilim Kurgu'],
                 type,
@@ -191,13 +198,13 @@ async function getMovieDetails(tmdbId, type = 'movie') {
     if (!parsed) {
         parsed = {
             id: tmdbId,
-            title: titleToSearch,
-            originalTitle: titleToSearch,
-            overview: `${titleToSearch} (${yearToSearch}) filmi. Bağlantı sorunu nedeniyle detaylar yüklenemedi.`,
+            title: titleToSearch || 'Bilinmeyen Yapım',
+            originalTitle: titleToSearch || 'Bilinmeyen Yapım',
+            overview: titleToSearch ? `${titleToSearch} (${yearToSearch}) filmi. Bağlantı sorunu nedeniyle detaylar yüklenemedi.` : 'Bağlantı sorunu nedeniyle detaylar yüklenemedi.',
             posterUrl: null,
             backdropUrl: null,
             rating: 0,
-            releaseDate: `${yearToSearch}-01-01`,
+            releaseDate: `${yearToSearch || '2000'}-01-01`,
             runtime: 120,
             genres: ['Aksiyon'],
             type,
@@ -230,24 +237,77 @@ async function loadPostersForUniverse(universe, onProgress) {
 
 async function searchTMDB(query) {
     if (!query || query.length < 2) return [];
+
+    let results = [];
+
+    // 1. Try TMDB via Proxy
     try {
         const data = await fetchTMDB('/search/multi', { query, include_adult: false });
-        return (data.results || [])
-            .filter(r => r.media_type === 'movie' || r.media_type === 'tv')
-            .slice(0, 8)
-            .map(r => ({
-                tmdbId: r.id,
-                title: r.title || r.name,
-                year: (r.release_date || r.first_air_date || '').slice(0, 4),
-                type: r.media_type === 'tv' ? 'series' : 'movie',
-                posterUrl: r.poster_path ? `${TMDB_IMG_BASE}${POSTER_SIZE}${r.poster_path}` : null,
-                rating: Math.round((r.vote_average || 0) * 10) / 10,
-                overview: r.overview,
-            }));
+        if (data && data.results) {
+            results = data.results
+                .filter(r => r.media_type === 'movie' || r.media_type === 'tv')
+                .slice(0, 8)
+                .map(r => ({
+                    tmdbId: r.id,
+                    title: r.title || r.name,
+                    year: (r.release_date || r.first_air_date || '').slice(0, 4),
+                    type: r.media_type === 'tv' ? 'series' : 'movie',
+                    posterUrl: r.poster_path ? `${TMDB_IMG_BASE}${POSTER_SIZE}${r.poster_path}` : null,
+                    rating: Math.round((r.vote_average || 0) * 10) / 10,
+                    overview: r.overview,
+                }));
+        }
     } catch (e) {
-        console.warn('Search failed:', e);
-        return [];
+        console.warn('TMDB Search failed:', e);
     }
+
+    // 2. Try OMDB via HTTP (bypasses HTTPS SNI manipulation)
+    if (results.length === 0) {
+        try {
+            const url = `http://www.omdbapi.com/?s=${encodeURIComponent(query)}&${OMDB_KEY}`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.Search) {
+                    results = data.Search.slice(0, 8).map(r => ({
+                        tmdbId: r.imdbID,
+                        title: r.Title,
+                        year: r.Year,
+                        type: r.Type === 'series' ? 'series' : 'movie',
+                        posterUrl: r.Poster && r.Poster !== 'N/A' ? `https://wsrv.nl/?url=${r.Poster.replace('https://', '')}` : null,
+                        rating: 0,
+                        overview: `${r.Title} (${r.Year}) filmi/dizisi (Bölgesel bağlantı sorunu nedeniyle detaylar kısıtlı).`
+                    }));
+                }
+            }
+        } catch (e) {
+            console.warn('OMDB Search failed:', e);
+        }
+    }
+
+    // 3. Ultimate Fallback: Local UNIVERSES data
+    if (results.length === 0 && typeof UNIVERSES !== 'undefined') {
+        const q = query.toLowerCase();
+        for (let u of UNIVERSES) {
+            for (let item of u.items) {
+                if (item.title && item.title.toLowerCase().includes(q)) {
+                    results.push({
+                        tmdbId: item.tmdbId || item.id,
+                        title: item.title,
+                        year: item.year || '2000',
+                        type: item.type || 'movie',
+                        posterUrl: null,
+                        rating: 0,
+                        overview: `(Çevrimdışı/Yerel Koleksiyon) ${item.title}`
+                    });
+                    if (results.length >= 8) break;
+                }
+            }
+            if (results.length >= 8) break;
+        }
+    }
+
+    return results;
 }
 
 async function fetchPopularTMDB() {
@@ -274,7 +334,64 @@ async function fetchPopularTMDB() {
     }
 }
 
+async function fetchUpcomingTMDB() {
+    try {
+        // Fetch movies releasing in the next 30 days
+        const data = await fetchTMDB('/movie/upcoming', { language: 'tr-TR', region: 'TR' });
+        return (data.results || [])
+            .slice(0, 10)
+            .map(r => ({
+                id: `upcoming-${r.id}`,
+                tmdbId: r.id,
+                title: r.title,
+                year: (r.release_date || '').slice(0, 4),
+                type: 'movie',
+                posterUrl: r.poster_path ? `${TMDB_IMG_BASE}${POSTER_SIZE}${r.poster_path}` : null,
+                backdropUrl: r.backdrop_path ? `${TMDB_IMG_BASE}${BACKDROP_SIZE}${r.backdrop_path}` : null,
+                rating: Math.round((r.vote_average || 0) * 10) / 10,
+                overview: r.overview,
+                releaseDate: r.release_date,
+                posterCss: 'linear-gradient(135deg, #2a2a3a, #1a1a2a)'
+            }));
+    } catch (e) {
+        console.warn('Upcoming fetch failed:', e);
+        return [];
+    }
+}
+
 function posterUrl(path, size = POSTER_SIZE) {
     // If TMDB works somehow, try to fetch it over HTTP proxy
     return path ? `https://wsrv.nl/?url=image.tmdb.org/t/p/${size}${path}&output=webp&n=1&q=70` : null;
+}
+
+async function fetchRandomTMDBMovie() {
+    try {
+        const randomPage = Math.floor(Math.random() * 500) + 1;
+        const data = await fetchTMDB('/discover/movie', {
+            language: 'tr-TR',
+            page: randomPage,
+            include_adult: false,
+            sort_by: 'popularity.desc'
+        });
+
+        if (data && data.results && data.results.length > 0) {
+            const results = data.results.filter(r => r.poster_path && r.overview);
+            if (results.length > 0) {
+                const r = results[Math.floor(Math.random() * results.length)];
+                return {
+                    tmdbId: r.id,
+                    title: r.title,
+                    year: (r.release_date || '').slice(0, 4),
+                    type: 'movie',
+                    posterUrl: r.poster_path ? `${TMDB_IMG_BASE}${POSTER_SIZE}${r.poster_path}` : null,
+                    backdropUrl: r.backdrop_path ? `${TMDB_IMG_BASE}${BACKDROP_SIZE}${r.backdrop_path}` : null,
+                    rating: Math.round((r.vote_average || 0) * 10) / 10,
+                    overview: r.overview
+                };
+            }
+        }
+    } catch (e) {
+        console.warn('Random TMDB fetch failed:', e);
+    }
+    return null;
 }

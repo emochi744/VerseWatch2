@@ -13,9 +13,29 @@ let currentView = 'home'; // home | stats
 let posterCache = {}; // { itemId: tmdbData }
 
 // User Feedback Storage Helpers
-const getRatings = () => JSON.parse(localStorage.getItem('versewatch_ratings') || '{}');
-const getComments = () => JSON.parse(localStorage.getItem('versewatch_comments') || '{}');
-const getRecent = () => JSON.parse(localStorage.getItem('versewatch_recent') || []);
+const getWatched = () => { try { return JSON.parse(localStorage.getItem('versewatch_watched')) || {}; } catch (e) { return {}; } };
+const isWatched = (itemId) => !!getWatched()[itemId];
+const toggleWatched = (itemId) => {
+    const w = getWatched();
+    if (w[itemId]) delete w[itemId];
+    else w[itemId] = true;
+    localStorage.setItem('versewatch_watched', JSON.stringify(w));
+    return !!w[itemId];
+};
+
+const getRatings = () => { try { return JSON.parse(localStorage.getItem('versewatch_ratings')) || {}; } catch (e) { return {}; } };
+const getComments = () => { try { return JSON.parse(localStorage.getItem('versewatch_comments')) || {}; } catch (e) { return {}; } };
+const getRecent = () => { try { return JSON.parse(localStorage.getItem('versewatch_recent')) || []; } catch (e) { return []; } };
+
+const getWatchlist = () => { try { return JSON.parse(localStorage.getItem('versewatch_watchlist')) || []; } catch (e) { return []; } };
+const toggleWatchlist = (itemId) => {
+    let list = getWatchlist();
+    const index = list.indexOf(itemId);
+    if (index > -1) list.splice(index, 1);
+    else list.push(itemId);
+    localStorage.setItem('versewatch_watchlist', JSON.stringify(list));
+    return list.includes(itemId);
+};
 
 const saveRating = (itemId, rating) => {
     const r = getRatings();
@@ -24,7 +44,7 @@ const saveRating = (itemId, rating) => {
     localStorage.setItem('versewatch_ratings', JSON.stringify(r));
 };
 
-const getEpisodes = () => JSON.parse(localStorage.getItem('versewatch_episodes') || '{}');
+const getEpisodes = () => { try { return JSON.parse(localStorage.getItem('versewatch_episodes')) || {}; } catch (e) { return {}; } };
 
 const saveEpisodeProgress = (itemId, season, episode) => {
     const ep = getEpisodes();
@@ -69,6 +89,19 @@ const RANKS = [
     { min: 500, name: 'Efsanevi İzleyici', level: 8 }
 ];
 
+function getUniverseStats(universe) {
+    const watchedMap = getWatched();
+    let done = 0;
+    universe.items.forEach(item => {
+        if (watchedMap[item.id]) done++;
+    });
+    return {
+        total: universe.items.length,
+        done,
+        percent: universe.items.length > 0 ? Math.round((done / universe.items.length) * 100) : 0
+    };
+}
+
 function updateLevelUI() {
     let totalWatched = 0;
     UNIVERSES.forEach(u => totalWatched += getUniverseStats(u).done);
@@ -103,14 +136,34 @@ function updateLevelUI() {
     }
 }
 
-function suggestRandomItem() {
-    const watched = getWatched();
-    const unwatchedItems = [];
-    UNIVERSES.forEach(u => {
-        u.items.forEach(item => {
-            if (!watched[item.id]) unwatchedItems.push(item);
-        });
+async function suggestRandomItem() {
+    showToast('Tüm veritabanından rastgele içerik aranıyor 🎲', 'info');
+    // Make an API call to get a truly random TMDB movie
+    const randMovie = await fetchRandomTMDBMovie();
+
+    if (randMovie) {
+        // Ensure it has an id the app expects
+        randMovie.id = `random-${randMovie.tmdbId}`;
+        // Verify it's not already watched
+        if (!isWatched(randMovie.id)) {
+            // Add proxy background to cache to make modal happy
+            posterCache[randMovie.id] = randMovie;
+            openModal(randMovie);
+            return;
+        }
+    }
+
+    // Fallback logic if API fails or item is watched
+    const allItems = [];
+    UNIVERSES.forEach(u => allItems.push(...u.items));
+
+    Object.values(posterCache).forEach(item => {
+        if (item && item.id && !allItems.find(i => i.id === item.id)) {
+            allItems.push(item);
+        }
     });
+
+    const unwatchedItems = allItems.filter(item => !isWatched(item.id));
 
     if (unwatchedItems.length === 0) {
         showToast('İzlenecek hiçbir şey kalmadı, efsanesin!', 'success');
@@ -216,6 +269,7 @@ function setupNav() {
 }
 
 function switchView(view) {
+    window.scrollTo(0, 0);
     currentView = view;
     $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
 
@@ -223,6 +277,8 @@ function switchView(view) {
     $('view-home').classList.toggle('active', view === 'home');
     $('view-popular').classList.toggle('active', view === 'popular');
     $('view-stats').classList.toggle('active', view === 'stats');
+    const profileView = $('view-profile');
+    if (profileView) profileView.classList.toggle('active', view === 'profile');
 
     // Always hide universe detail when switching main tabs
     $('view-universe-wrapper').classList.remove('active');
@@ -231,6 +287,45 @@ function switchView(view) {
     if (view === 'home') renderHomeView();
     if (view === 'popular') renderPopularView();
     if (view === 'stats') renderStatsView();
+    if (view === 'profile') renderProfileView();
+}
+
+function renderProfileView() {
+    const grid = $('profile-grid');
+    if (!grid) return;
+
+    const watchedMap = getWatched();
+    grid.innerHTML = '';
+
+    const watchedItems = [];
+    // 1. Check UNIVERSES
+    UNIVERSES.forEach(u => {
+        u.items.forEach(item => {
+            if (watchedMap[item.id]) {
+                watchedItems.push(item);
+            }
+        });
+    });
+
+    // 2. Check posterCache for items not in UNIVERSES (e.g. from Popular/Search)
+    Object.keys(watchedMap).forEach(id => {
+        if (!watchedItems.find(i => i.id === id)) {
+            const cached = posterCache[id];
+            if (cached) {
+                watchedItems.push(cached);
+            }
+        }
+    });
+
+    if (watchedItems.length === 0) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">Henüz hiçbir şey izlemedin. Portalda keşfe çık!</div>';
+        return;
+    }
+
+    watchedItems.forEach(item => {
+        const card = createMovieCard(item);
+        grid.appendChild(card);
+    });
 }
 
 async function renderPopularView() {
