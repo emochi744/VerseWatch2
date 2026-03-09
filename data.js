@@ -397,6 +397,60 @@ const UNIVERSES = [
                 "tmdbId": 138502,
                 "imdbId": "tt15562104",
                 "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-44",
+                "title": "The Incredible Hulk",
+                "year": 2008,
+                "type": "movie",
+                "tmdbId": 1724,
+                "imdbId": "tt0800080",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-45",
+                "title": "Hawkeye",
+                "year": 2021,
+                "type": "series",
+                "tmdbId": 88329,
+                "imdbId": "tt10160804",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-46",
+                "title": "Moon Knight",
+                "year": 2022,
+                "type": "series",
+                "tmdbId": 92749,
+                "imdbId": "tt11814154",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-47",
+                "title": "Ms. Marvel",
+                "year": 2022,
+                "type": "series",
+                "tmdbId": 92782,
+                "imdbId": "tt10857164",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-48",
+                "title": "She-Hulk: Attorney at Law",
+                "year": 2022,
+                "type": "series",
+                "tmdbId": 92783,
+                "imdbId": "tt10857166",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
+            },
+            {
+                "id": "mcu-49",
+                "title": "What If...?",
+                "year": 2021,
+                "type": "series",
+                "tmdbId": 91363,
+                "imdbId": "tt10168312",
+                "posterCss": "linear-gradient(135deg, #e23636, #7b1fa2)"
             }
         ]
     },
@@ -1008,6 +1062,116 @@ const UNIVERSES = [
                 "tmdbId": 823464,
                 "imdbId": "tt14539740",
                 "posterCss": "linear-gradient(135deg, #1b5e20, #4caf50)"
+            }
+        ]
+    },
+    {
+        "id": "wizardingworld",
+        "name": "Büyücülük Dünyası",
+        "shortName": "Harry Potter",
+        "color": "#c4a000",
+        "gradient": "linear-gradient(135deg, #3e2723 0%, #c4a000 100%)",
+        "icon": "⚡",
+        "description": "Harry Potter ve Fantastik Canavarlar serisi",
+        "items": [
+            {
+                "id": "hp-1",
+                "title": "Harry Potter and the Sorcerer's Stone",
+                "year": 2001,
+                "type": "movie",
+                "tmdbId": 671,
+                "imdbId": "tt0241527",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-2",
+                "title": "Harry Potter and the Chamber of Secrets",
+                "year": 2002,
+                "type": "movie",
+                "tmdbId": 672,
+                "imdbId": "tt0295297",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-3",
+                "title": "Harry Potter and the Prisoner of Azkaban",
+                "year": 2004,
+                "type": "movie",
+                "tmdbId": 673,
+                "imdbId": "tt0304141",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-4",
+                "title": "Harry Potter and the Goblet of Fire",
+                "year": 2005,
+                "type": "movie",
+                "tmdbId": 674,
+                "imdbId": "tt0330373",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-5",
+                "title": "Harry Potter and the Order of the Phoenix",
+                "year": 2007,
+                "type": "movie",
+                "tmdbId": 675,
+                "imdbId": "tt0373889",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-6",
+                "title": "Harry Potter and the Half-Blood Prince",
+                "year": 2009,
+                "type": "movie",
+                "tmdbId": 767,
+                "imdbId": "tt0417741",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-7",
+                "title": "Harry Potter and the Deathly Hallows: Part 1",
+                "year": 2010,
+                "type": "movie",
+                "tmdbId": 12444,
+                "imdbId": "tt0926084",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-8",
+                "title": "Harry Potter and the Deathly Hallows: Part 2",
+                "year": 2011,
+                "type": "movie",
+                "tmdbId": 12445,
+                "imdbId": "tt1201607",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-9",
+                "title": "Fantastic Beasts and Where to Find Them",
+                "year": 2016,
+                "type": "movie",
+                "tmdbId": 259316,
+                "imdbId": "tt3183660",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-10",
+                "title": "Fantastic Beasts: The Crimes of Grindelwald",
+                "year": 2018,
+                "type": "movie",
+                "tmdbId": 338952,
+                "imdbId": "tt4123430",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
+            },
+            {
+                "id": "hp-11",
+                "title": "Fantastic Beasts: The Secrets of Dumbledore",
+                "year": 2022,
+                "type": "movie",
+                "tmdbId": 338953,
+                "imdbId": "tt4123432",
+                "posterCss": "linear-gradient(135deg, #3e2723, #c4a000)"
             }
         ]
     }
