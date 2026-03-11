@@ -285,20 +285,29 @@ async function searchTMDB(query) {
         }
     }
 
-    // 3. Ultimate Fallback: Local UNIVERSES data
+    // 3. Ultimate Fallback: Local UNIVERSES data (Feature 10: Turkish char normalization)
     if (results.length === 0 && typeof UNIVERSES !== 'undefined') {
-        const q = query.toLowerCase();
+        const normTR = (s) => s.toLowerCase()
+            .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+            .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+            .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's')
+            .replace(/İ/g, 'i').replace(/Ö/g, 'o').replace(/Ç/g, 'c');
+        const qNorm = normTR(query);
+        const qLower = query.toLowerCase();
         for (let u of UNIVERSES) {
             for (let item of u.items) {
-                if (item.title && item.title.toLowerCase().includes(q)) {
+                if (!item.title) continue;
+                const titleLower = item.title.toLowerCase();
+                const titleNorm = normTR(item.title);
+                if (titleLower.includes(qLower) || titleNorm.includes(qNorm) || titleLower.includes(qNorm) || titleNorm.includes(qLower)) {
                     results.push({
                         tmdbId: item.tmdbId || item.id,
                         title: item.title,
                         year: item.year || '2000',
                         type: item.type || 'movie',
-                        posterUrl: null,
-                        rating: 0,
-                        overview: `(Çevrimdışı/Yerel Koleksiyon) ${item.title}`
+                        posterUrl: posterCache[item.id] ? posterCache[item.id].posterUrl : null,
+                        rating: posterCache[item.id] ? posterCache[item.id].rating : 0,
+                        overview: posterCache[item.id] ? posterCache[item.id].overview : `(Koleksiyon) ${item.title}`
                     });
                     if (results.length >= 8) break;
                 }

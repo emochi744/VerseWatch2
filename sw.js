@@ -1,5 +1,5 @@
 // VerseWatch Service Worker
-const CACHE_NAME = 'versewatch-v11';
+const CACHE_NAME = 'versewatch-v13';
 const ASSETS = [
     './',
     './index.html',
@@ -9,7 +9,8 @@ const ASSETS = [
     './tmdb.js',
     './manifest.json',
     './icon-192.png',
-    './icon-512.png'
+    './icon-512.png',
+    './firebase-app.js'
 ];
 
 self.addEventListener('install', event => {
