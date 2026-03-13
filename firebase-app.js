@@ -29,6 +29,14 @@ let storage = null;
 let currentUser = null;
 let isFirebaseReady = false;
 
+const isAPK = () => {
+    // APK / WebView / Standalone modunda çalışıp çalışmadığını algıla
+    const isFileProtocol = window.location.protocol === 'file:';
+    const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    const isWebView = /wv|WebView/i.test(navigator.userAgent);
+    return isFileProtocol || isWebView || isStandalone;
+};
+
 function initFirebase() {
     try {
         if (!firebase.apps.length) {
@@ -39,6 +47,21 @@ function initFirebase() {
         storage = firebase.storage();
         isFirebaseReady = true;
         console.log('[Firebase] Initialized ✓');
+
+        // Giriş Yönlendirme Sonucunu İşle (APK/Standalone için önemli)
+        auth.getRedirectResult()
+            .then((result) => {
+                if (result.user) {
+                    console.log('[Firebase] Yönlendirme girişi başarılı:', result.user.displayName);
+                }
+            })
+            .catch((error) => {
+                console.error('[Firebase] Yönlendirme giriş hatası:', error.code, error.message);
+                if (typeof showToast === 'function') {
+                    showToast('Giriş Hatası: ' + error.message, 'error');
+                }
+            });
+
     } catch (e) {
         console.error('[Firebase] Init failed:', e);
         isFirebaseReady = false;
@@ -61,7 +84,17 @@ function signInWithGoogle() {
     if (!auth) return;
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    return auth.signInWithPopup(provider);
+
+    if (isAPK()) {
+        console.log('[Firebase] APK algılandı, Redirect (Yönlendirme) akışı kullanılıyor');
+        return auth.signInWithRedirect(provider);
+    } else {
+        console.log('[Firebase] Tarayıcı algılandı, Popup akışı kullanılıyor');
+        return auth.signInWithPopup(provider).catch(err => {
+            console.error('[Firebase] Popup engellendi veya hata oluştu, redirect deneniyor...', err);
+            return auth.signInWithRedirect(provider);
+        });
+    }
 }
 
 function signOutUser() {
