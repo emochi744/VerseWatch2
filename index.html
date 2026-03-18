@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0d0d1a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,8 +12,12 @@
   <title>VerseWatch — Film & Dizi Takibi</title>
   <meta name="description"
     content="İzlediğin film ve dizileri evrenlerine göre takip et. MCU, X-Men, DCEU ve daha fazlası.">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=33.0">
   <link rel="manifest" href="manifest.json">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -34,94 +39,181 @@
   <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <!-- ========== LOGIN OVERLAY ========== -->
+  <div id="login-overlay" class="login-overlay" style="display:none">
+    <div class="login-card">
+      <img src="icon-512.png" alt="VerseWatch" class="login-logo">
+      <h1 class="login-title">VerseWatch</h1>
+      <p class="login-sub">Arkadaşlarınla birlikte film takibi</p>
+      <button id="btn-google-signin" class="btn-google-signin">
+        <svg width="20" height="20" viewBox="0 0 48 48">
+          <path fill="#EA4335"
+            d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.3 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.4l7.9 6.2C12.4 13.3 17.8 9.5 24 9.5z" />
+          <path fill="#4285F4"
+            d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.4-4.7 7.1l7.4 5.7c4.3-4 6.8-9.8 7.1-16.8z" />
+          <path fill="#FBBC05"
+            d="M10.5 28.5c-.5-1.5-.8-3.1-.8-4.8s.3-3.3.8-4.8l-7.9-6.2C.9 16 0 19.9 0 24s.9 8 2.6 11.3l7.9-6.8z" />
+          <path fill="#34A853"
+            d="M24 48c6.1 0 11.3-2 15-5.5l-7.4-5.7c-2 1.4-4.6 2.2-7.6 2.2-6.2 0-11.5-4.2-13.4-9.8l-7.9 6.8C6.6 42.6 14.6 48 24 48z" />
+        </svg>
+        Google ile Giriş Yap
+      </button>
+      <p class="login-note">Devam ederek gizlilik politikasını kabul etmiş olursun.</p>
+    </div>
+  </div>
+
+  <!-- ========== NICKNAME SETUP MODAL ========== -->
+  <div id="nickname-modal" class="nickname-modal" style="display:none">
+    <div class="nickname-card">
+      <div class="nickname-header">
+        <div id="selected-avatar" class="selected-avatar">🎬</div>
+        <h2 class="nickname-title">Profil Oluştur</h2>
+        <p class="nickname-sub">Arkadaşların seni nasıl görsün?</p>
+      </div>
+      <div class="avatar-picker">
+        <div class="avatar-grid" id="avatar-grid">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+      <div class="nick-input-wrap">
+        <input id="nick-input" class="nick-input" type="text" placeholder="Kullanıcı adı (örn. CinemaFan42)"
+          maxlength="20">
+        <span id="nick-status" class="nick-status"></span>
+      </div>
+      <div class="nick-input-wrap" style="margin-top:12px;">
+        <label for="photo-upload-input" class="nick-input"
+          style="display:flex;align-items:center;cursor:pointer;justify-content:center;color:var(--text-muted);background:var(--bg-card);border:1px dashed var(--glass-border)">
+          📷 Yüklemek için tıkla (İsteğe bağlı)
+        </label>
+        <input id="photo-upload-input" type="file" accept="image/*" style="display:none;">
+        <div id="photo-upload-preview" style="text-align:center;margin-top:8px;font-size:12px;color:var(--text-muted)">
+        </div>
+      </div>
+      <button id="btn-save-profile" class="btn-save-profile" disabled>Kaydet & Başla 🚀</button>
+      <button id="btn-cancel-profile" class="btn-save-profile"
+        style="display:none; background:transparent; color:var(--text-muted); border:1px solid var(--glass-border); margin-top:8px;">İptal</button>
+    </div>
+  </div>
+
+  <!-- ========== FRIEND PROFILE MODAL ========== -->
+  <div id="friend-modal" class="friend-modal" style="display:none">
+    <div class="friend-modal-card">
+      <button class="friend-modal-close" onclick="closeFriendModal()">✕</button>
+      <div id="friend-modal-content"><!-- Filled by JS --></div>
+    </div>
+    <div class="friend-modal-backdrop" onclick="closeFriendModal()"></div>
+  </div>
+
+
   <!-- Main App Container -->
   <div id="app">
 
-    <!-- ========== HEADER ========== -->
-    <header class="app-header">
-      <div class="logo" id="logo-home" style="display:flex;align-items:center;cursor:pointer">
-        <img src="icon-192.png" alt="VerseWatch Logo" class="logo-img"
-          style="width: 28px; height: 28px; border-radius: 6px;">
-        <div class="logo-text" style="margin-left:8px;font-weight:800;letter-spacing:-0.5px">VerseWatch</div>
-      </div>
-      <div class="header-actions">
-        <button id="search-toggle-btn" class="btn-icon" aria-label="Arama" title="Ara">🔍</button>
-      </div>
-    </header>
+    <!-- ========== STICKY HEADER WRAPPER ========== -->
+    <div id="search-anchor" class="search-anchor">
 
-    <!-- ========== SEARCH BAR ========== -->
-    <div id="search-bar" class="search-bar" role="search">
-      <div class="search-input-wrap">
-        <input id="search-input" type="search" class="search-input" placeholder="Film veya dizi ara..."
-          autocomplete="off" autocorrect="off" spellcheck="false">
-      </div>
-    </div>
+      <!-- ========== HEADER ========== -->
+      <header class="app-header">
+        <div class="logo" id="logo-home" style="display:flex;align-items:center;cursor:pointer">
+          <img src="icon-192.png" alt="VerseWatch Logo" class="logo-img"
+            style="width: 28px; height: 28px; border-radius: 6px;">
+          <div class="logo-text" style="margin-left:8px;font-weight:800;letter-spacing:-0.5px">VerseWatch</div>
+        </div>
+        <div class="header-actions">
+          <button id="search-toggle-btn" class="btn-icon" aria-label="Arama" title="Ara">🔍</button>
+        </div>
+      </header>
 
-    <!-- ========== SEARCH RESULTS ========== -->
-    <div id="search-results-container" class="search-results"></div>
+      <!-- ========== SEARCH BAR ========== -->
+      <div id="search-bar" class="search-bar" role="search">
+        <div class="search-input-wrap">
+          <input id="search-input" type="search" class="search-input" placeholder="Film veya dizi ara..."
+            autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+      </div>
+
+      <!-- ========== SEARCH RESULTS (absolute within wrapper) ========== -->
+      <div id="search-results-container" class="search-results"></div>
+
+    </div><!-- /search-anchor -->
+
+
 
     <!-- ========== VIEWS ========== -->
     <main id="main-content">
 
       <!-- HOME / PORTAL VIEW -->
       <section id="view-home" class="view portal-view active">
-        <div class="portal-container">
-          <div class="portal-hero">
-            <img src="icon-512.png" alt="Big Logo" class="portal-logo"
-              style="width:100px;height:100px;border-radius:24px;box-shadow:var(--shadow-glow)">
-            <h1 class="portal-title" style="margin-top:20px;font-size:32px">VerseWatch</h1>
-            <p class="portal-subtitle">Sinematik Evren Portalı</p>
-          </div>
 
-          <!-- Global Stats -->
-          <div class="global-stats" style="margin-bottom:32px">
-            <div class="stat-card">
-              <div class="stat-value" id="stat-total">—</div>
-              <div class="stat-label">Toplam</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="stat-watched" style="color:var(--accent-blue)">—</div>
-              <div class="stat-label">İzlendi</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="stat-percent" style="color:var(--accent-purple)">—</div>
-              <div class="stat-label">Bitti</div>
+        <!-- ===== PORTAL HERO — Compact Greeting ===== -->
+        <div class="portal-greeting-bar">
+          <div class="portal-greeting-left">
+            <div>
+              <div class="greeting-title">VerseWatch</div>
+              <div class="greeting-sub">Sinematik Evren Portalı</div>
             </div>
           </div>
+          <button id="btn-random-suggest" class="btn-suggest-pill">🎲 Ne İzlesem?</button>
+        </div>
 
-          <!-- User Level & Progress -->
-          <div id="user-level-container" class="user-level-card">
-            <div class="level-header">
-              <span id="user-rank" class="level-rank-name">Yükleniyor...</span>
-              <span id="user-level-num" class="level-number">Seviye --</span>
-            </div>
-            <div class="level-progress-bar-bg">
-              <div id="level-progress-fill" class="level-progress-bar-fill"></div>
-            </div>
-            <div class="level-progress-info">
-              <span id="level-xp-text">-- / -- XP</span>
-              <span id="level-percent">--%</span>
-            </div>
+        <!-- ===== QUICK STATS STRIP ===== -->
+        <div class="quick-stats-strip">
+          <div class="quick-stat">
+            <span class="qs-val" id="stat-total">—</span>
+            <span class="qs-lbl" data-i18n="section_content">İçerik</span>
           </div>
-
-          <!-- Recently Watched Panel -->
-          <div id="recent-panel" class="recent-section" style="display: none;">
-            <div class="section-header" style="padding-left:0; margin-bottom:12px">
-              <div class="section-title" style="font-size:16px">🕒 Son İzlediklerin</div>
-            </div>
-            <div id="recent-scroll" class="recent-scroll">
-              <!-- Recently watched items injected here -->
-            </div>
+          <div class="qs-divider"></div>
+          <div class="quick-stat">
+            <span class="qs-val accent-blue" id="stat-watched">—</span>
+            <span class="qs-lbl" data-i18n="stats_watched">İzlendi</span>
           </div>
-
-          <div class="section-header" style="padding-left:0">
-            <div class="section-title">Evrenler</div>
-          </div>
-          <div class="portal-grid" id="portal-grid">
-            <!-- Universe cards will be injected here via JS -->
+          <div class="qs-divider"></div>
+          <div class="quick-stat">
+            <span class="qs-val accent-purple" id="stat-percent">—</span>
+            <span class="qs-lbl" data-i18n="section_completed">Tamamlandı</span>
           </div>
         </div>
+
+        <!-- ===== LEVEL CARD ===== -->
+        <div id="user-level-container" class="user-level-card">
+          <div class="level-header">
+            <span id="user-rank" class="level-rank-name">Yükleniyor...</span>
+            <span id="user-level-num" class="level-number">Seviye --</span>
+          </div>
+          <div class="level-progress-bar-bg">
+            <div id="level-progress-fill" class="level-progress-bar-fill"></div>
+          </div>
+          <div class="level-progress-info">
+            <span id="level-xp-text">-- / -- XP</span>
+            <span id="level-percent">--%</span>
+          </div>
+        </div>
+
+        <!-- ===== RECENTLY WATCHED ===== -->
+        <div id="recent-panel" class="home-section" style="display: none;">
+          <div class="home-section-header">
+            <span class="home-section-title" data-i18n="recent_title">🕒 Son İzlediklerin</span>
+          </div>
+          <div id="recent-scroll" class="recent-scroll"></div>
+        </div>
+
+        <!-- ===== WATCHLIST ===== -->
+        <div id="watchlist-panel" class="home-section" style="display: none;">
+          <div class="home-section-header">
+            <span class="home-section-title" data-i18n="watchlist_title">🔖 İzleme Listem</span>
+          </div>
+          <div id="watchlist-scroll" class="recent-scroll"></div>
+        </div>
+
+        <!-- ===== UNIVERSES ===== -->
+        <div class="home-section">
+          <div class="home-section-header">
+            <span class="home-section-title" data-i18n="universes_title">🌌 Evrenler</span>
+          </div>
+          <div class="portal-grid" id="portal-grid"></div>
+        </div>
+
       </section>
+
 
       <!-- UNIVERSE / LIST VIEW -->
       <section id="view-universe-wrapper" class="view">
@@ -144,107 +236,474 @@
         </div>
       </section>
 
-      <!-- STATS VIEW -->
-      <section id="view-stats" class="view stats-view">
-        <div class="stats-title">📊 İstatistikler</div>
-        <div class="stats-grid">
-          <div class="stats-detail-card">
-            <div class="big-number" id="stats-done-count" style="color: var(--accent-blue)">—</div>
-            <div class="label">İzlenen</div>
+      <!-- POPULAR VIEW -->
+      <section id="view-popular" class="view popular-view">
+
+        <!-- Upcoming Releases -->
+        <div id="upcoming-panel" class="recent-section" style="display:none;">
+          <div class="section-header">
+            <div class="section-title">⏳ Yakında Vizyonda</div>
           </div>
-          <div class="stats-detail-card">
-            <div class="big-number" id="stats-total-count" style="color: var(--accent-purple)">—</div>
-            <div class="label">Toplam</div>
+          <div id="upcoming-scroll" class="recent-scroll">
+            <!-- Upcoming cards injected here -->
           </div>
         </div>
 
+        <div class="section-header" style="margin-top: 24px;">
+          <div class="section-title">🔥 Popüler & Trendler</div>
+        </div>
+        <div id="popular-grid" class="movies-grid">
+          <!-- Loaded from TMDB -->
+          <div class="loading-spinner" style="grid-column: 1 / -1; margin: 40px auto;"></div>
+        </div>
+      </section>
+
+      <!-- STATS VIEW -->
+      <section id="view-stats" class="view stats-view">
+        <div class="stats-title"><span data-i18n="stats_title">📊 İstatistikler</span></div>
+        <div class="stats-grid-modern" id="active-stats-grid">
+           <!-- Modern Cards injected here -->
+        </div>
+
+        <div id="stats-charts-container">
+            <!-- Donut & Bars injected here -->
+        </div>
+
         <!-- Universe Mastery Metrics -->
-        <div id="stats-mastery-container" class="mastery-section" style="margin-top: 32px; padding: 0 20px;">
-          <div class="section-header" style="padding-left:0; margin-bottom:16px">
-            <div class="section-title" style="font-size:16px">🏆 Evren Ustalığı</div>
+        <div id="stats-mastery-container" class="mastery-section">
+          <div class="section-header">
+            <div class="section-title" data-i18n="stats_mastery">🏆 Evren Ustalığı</div>
           </div>
-          <div id="mastery-grid" class="mastery-grid"
-            style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 32px;">
+          <div id="mastery-grid" class="mastery-grid">
             <!-- Mastery cards injected here -->
           </div>
         </div>
-        <div class="section-header" style="padding-left:0; margin-top:32px">
-          <div class="section-title">İlerleme Durumu</div>
+      </section>
+
+      <!-- SETTINGS VIEW -->
+      <section id="view-settings" class="view settings-view">
+        <div class="settings-title">⚙️ Ayarlar</div>
+        
+        <div class="settings-list">
+          <!-- Preferences Group -->
+          <div class="settings-group">
+            <div class="settings-group-title">Tercihler</div>
+            
+            <!-- Language -->
+            <div class="settings-card">
+              <div class="settings-info">
+                <div class="settings-label">🌐 Dil / Language</div>
+                <div class="settings-sub">Uygulama dilini seçin</div>
+              </div>
+              <div class="lang-switch">
+                <button class="lang-btn active" data-lang="tr">TR</button>
+                <button class="lang-btn" data-lang="en">EN</button>
+              </div>
+            </div>
+
+            <!-- Theme -->
+            <div class="settings-card full-width">
+              <div class="settings-info">
+                <div class="settings-label">🎨 Tema Tasarımı</div>
+                <div class="settings-sub">VerseWatch renk şemasını değiştirin</div>
+              </div>
+              <div class="theme-picker-modern">
+                <button class="theme-btn theme-purple active" data-theme="theme-purple" title="Mor"></button>
+                <button class="theme-btn theme-green" data-theme="theme-green" title="Yeşil"></button>
+                <button class="theme-btn theme-blue" data-theme="theme-blue" title="Mavi"></button>
+                <button class="theme-btn theme-red" data-theme="theme-red" title="Kırmızı"></button>
+                <button class="theme-btn theme-orange" data-theme="theme-orange" title="Turuncu"></button>
+                <button class="theme-btn theme-pink" data-theme="theme-pink" title="Pembe"></button>
+              </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="settings-card">
+              <div class="settings-info">
+                <div class="settings-label">🔔 Bildirimler</div>
+                <div class="settings-sub">Yeni çıkan filmler ve güncellemeler</div>
+              </div>
+              <div class="toggle-switch active" id="toggle-notifications">
+                <div class="toggle-handle"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Management Group -->
+          <div class="settings-group">
+            <div class="settings-group-title">Veri Yönetimi</div>
+            
+            <!-- Export Data -->
+            <div class="settings-card">
+              <div class="settings-info">
+                <div class="settings-label">📥 Verileri Dışa Aktar</div>
+                <div class="settings-sub">İzleme listenizi ve ayarlarınızı yedekleyin</div>
+              </div>
+              <button id="btn-export-data" class="settings-action-btn primary">
+                📤 Export
+              </button>
+            </div>
+
+            <!-- Import Data -->
+            <div class="settings-card">
+              <div class="settings-info">
+                <div class="settings-label">📤 Verileri İçe Aktar</div>
+                <div class="settings-sub">Önceki yedeğinizi geri yükleyin</div>
+              </div>
+              <div class="file-input-wrapper">
+                <input type="file" id="file-import" accept=".json">
+                <label for="file-import" class="settings-action-btn">
+                  📁 Import
+                </label>
+              </div>
+            </div>
+
+            <!-- Clear Cache -->
+            <div class="settings-card">
+              <div class="settings-info">
+                <div class="settings-label">🗑️ Önbelleği Temizle</div>
+                <div class="settings-sub">Verileri sıfırla ve yeniden yükle</div>
+              </div>
+              <button id="btn-clear-cache" class="settings-action-btn danger">
+                Sıfırla
+              </button>
+            </div>
+          </div>
+
+          <!-- About Group -->
+          <div class="settings-group">
+            <div class="settings-group-title">Hakkında</div>
+            
+            <div class="settings-card" style="flex-direction: column; align-items: center; text-align: center; gap: var(--space-4);">
+              <div style="font-size: 48px;">🎬</div>
+              <div>
+                <div style="font-size: 20px; font-weight: 900; margin-bottom: var(--space-1);">VerseWatch</div>
+                <div style="font-size: 13px; color: var(--text-muted);">v28.3 • Film & Dizi Takip</div>
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted);">
+                Made with <span style="color: #ef4444;">❤️</span> for Movie Fans
+              </div>
+            </div>
+          </div>
         </div>
-        <div id="stats-universe-breakdown"></div>
+      </section>
+
+      <!-- FEED / AKTİVİTE VIEW -->
+      <section id="view-feed" class="view feed-view">
+        <div class="view-header">
+          <button class="btn-back" onclick="showView('profile')">‹</button>
+          <h1 class="view-title">✨ Akış</h1>
+          <div style="width: 36px;"></div>
+        </div>
+        <div id="feed-content" class="feed-content">
+          <!-- Friend activities rendered here -->
+        </div>
+      </section>
+
+      <!-- DETAILED FRIENDS VIEW -->
+      <section id="view-friends" class="view friends-view">
+        <div class="view-header">
+          <button class="btn-back" onclick="showView('profile')">‹</button>
+          <h1 class="view-title">👥 Arkadaşlar</h1>
+          <button class="btn-icon" onclick="showAddFriendModal()" style="width:36px;height:36px;">+</button>
+        </div>
+        
+        <div class="friends-search-bar">
+          <input type="text" id="friend-search-input" placeholder="Arkadaş ara..." class="friend-search-input">
+          <button id="btn-search-friend" class="btn-icon">🔍</button>
+        </div>
+        
+        <div class="friends-tabs">
+          <button class="friend-tab active" data-tab="all">Tümü</button>
+          <button class="friend-tab" data-tab="online">Çevrimiçi</button>
+          <button class="friend-tab" data-tab="requests">İstekler</button>
+        </div>
+        
+        <div id="friends-list-detailed" class="friends-list-detailed">
+          <!-- Detailed friends list rendered here -->
+        </div>
+      </section>
+
+      <!-- WATCHED / ARCHIVE VIEW -->
+      <section id="view-watched" class="view watched-view">
+        <div class="view-header">
+          <button class="btn-back" onclick="showView('profile')">‹</button>
+          <h1 class="view-title">🎬 Arşivim</h1>
+          <div style="width: 36px;"></div>
+        </div>
+        <div id="watched-grid" class="movies-grid" style="padding: 0 20px;">
+          <!-- Watched items rendered here -->
+        </div>
+      </section>
+
+      <!-- FAVORITES VIEW -->
+      <section id="view-favorites" class="view favorites-view">
+        <div class="view-header">
+          <button class="btn-back" onclick="showView('profile')">‹</button>
+          <h1 class="view-title">⭐ Favorilerim</h1>
+          <div style="width: 36px;"></div>
+        </div>
+        <div id="favorites-grid" class="movies-grid" style="padding: 0 20px;">
+          <!-- Favorites rendered here -->
+        </div>
+      </section>
+
+      <!-- ACHIEVEMENTS VIEW -->
+      <section id="view-achievements" class="view achievements-view">
+        <div class="view-header">
+          <button class="btn-back" onclick="showView('profile')">‹</button>
+          <h1 class="view-title">🏆 Rozetlerim</h1>
+          <div style="width: 36px;"></div>
+        </div>
+        <div id="achievements-list" class="achievements-list" style="padding: 0 20px;">
+          <!-- Achievements rendered here -->
+        </div>
+      </section>
+
+      <!-- HISTORY VIEW -->
+      <section id="view-history" class="view history-view">
+        <div class="view-header">
+          <button class="btn-back" onclick="showView('profile')">‹</button>
+          <h1 class="view-title">📜 İzleme Geçmişi</h1>
+          <button class="btn-icon" onclick="clearHistory()" style="width:36px;height:36px;">🗑️</button>
+        </div>
+        <div id="history-list" class="history-list" style="padding: 0 20px;">
+          <!-- History items rendered here -->
+        </div>
+      </section>
+      <!-- PROFILE VIEW -->
+      <section id="view-profile" class="view profile-view">
+        <!-- Premium Profile Header -->
+        <div class="profile-hero">
+          <div id="profile-firebase-avatar" class="profile-avatar">🎬</div>
+          <div id="profile-firebase-nick" class="profile-name">Kullanıcı</div>
+          <div id="profile-rank" class="profile-rank">Film Meraklısı</div>
+          
+          <!-- Stats Row -->
+          <div class="profile-stats-row">
+            <div class="profile-stat">
+              <span id="profile-stat-watched" class="stat-num">0</span>
+              <span class="stat-label">İzlendi</span>
+            </div>
+            <div class="profile-stat">
+              <span id="profile-stat-favorites" class="stat-num">0</span>
+              <span class="stat-label">Favori</span>
+            </div>
+            <div class="profile-stat">
+              <span id="profile-stat-friends" class="stat-num">0</span>
+              <span class="stat-label">Arkadaş</span>
+            </div>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="profile-actions">
+            <button id="btn-edit-profile" class="profile-btn primary">
+              ✏️ Düzenle
+            </button>
+            <button id="btn-open-settings" class="profile-btn secondary">
+              ⚙️ Ayarlar
+            </button>
+            <button id="btn-logout" class="profile-btn danger">
+              🚪 Çıkış
+            </button>
+          </div>
+        </div>
+
+        <!-- Profile Content Area -->
+        <div id="profile-content-area">
+          <!-- Content loaded dynamically here -->
+        </div>
+
+        <!-- Profile Menu Grid -->
+        <div class="profile-menu-grid">
+          <div class="profile-menu-card" data-section="friends" onclick="toggleProfileSection('friends')">
+            <div class="menu-icon">👥</div>
+            <div class="menu-title">Arkadaşlar</div>
+            <div class="menu-sub">Tüm arkadaşların</div>
+          </div>
+          
+          <div class="profile-menu-card" data-section="watched" onclick="toggleProfileSection('watched')">
+            <div class="menu-icon">🎬</div>
+            <div class="menu-title">Arşivim</div>
+            <div class="menu-sub">İzlediklerim</div>
+          </div>
+          
+          <div class="profile-menu-card" data-section="favorites" onclick="toggleProfileSection('favorites')">
+            <div class="menu-icon">⭐</div>
+            <div class="menu-title">Favoriler</div>
+            <div class="menu-sub">Beğendiklerim</div>
+          </div>
+          
+          <div class="profile-menu-card" data-section="achievements" onclick="toggleProfileSection('achievements')">
+            <div class="menu-icon">🏆</div>
+            <div class="menu-title">Rozetler</div>
+            <div class="menu-sub">Kazanılan rozetler</div>
+          </div>
+          
+          <div class="profile-menu-card" data-section="history" onclick="toggleProfileSection('history')">
+            <div class="menu-icon">📜</div>
+            <div class="menu-title">Geçmiş</div>
+            <div class="menu-sub">İzleme geçmişi</div>
+          </div>
+        </div>
+
+        <!-- Expandable Sections -->
+        <div id="profile-section-friends" class="profile-section" style="display:none;">
+          <div class="section-header-row">
+            <h3>👥 Arkadaşlar</h3>
+            <button onclick="toggleProfileSection('friends')" class="btn-close-section">✕</button>
+          </div>
+          <div id="profile-friends-list" class="profile-section-content"></div>
+        </div>
+
+        <div id="profile-section-watched" class="profile-section" style="display:none;">
+          <div class="section-header-row">
+            <h3>🎬 Arşivim</h3>
+            <button onclick="toggleProfileSection('watched')" class="btn-close-section">✕</button>
+          </div>
+          <div id="profile-watched-list" class="movies-grid" style="padding:0;"></div>
+        </div>
+
+        <div id="profile-section-favorites" class="profile-section" style="display:none;">
+          <div class="section-header-row">
+            <h3>⭐ Favoriler</h3>
+            <button onclick="toggleProfileSection('favorites')" class="btn-close-section">✕</button>
+          </div>
+          <div id="profile-favorites-list" class="movies-grid" style="padding:0;"></div>
+        </div>
+
+        <div id="profile-section-achievements" class="profile-section" style="display:none;">
+          <div class="section-header-row">
+            <h3>🏆 Rozetler</h3>
+            <button onclick="toggleProfileSection('achievements')" class="btn-close-section">✕</button>
+          </div>
+          <div id="profile-achievements-list" class="profile-section-content"></div>
+        </div>
+
+        <div id="profile-section-history" class="profile-section" style="display:none;">
+          <div class="section-header-row">
+            <h3>📜 İzleme Geçmişi</h3>
+            <button onclick="toggleProfileSection('history')" class="btn-close-section">✕</button>
+          </div>
+          <div id="profile-history-list" class="profile-section-content"></div>
+        </div>
+
+        <!-- Quick Settings Preview -->
+        <div class="profile-quick-settings">
+          <div class="quick-setting-item">
+            <span>🌐 Dil</span>
+            <span id="quick-lang-display">Türkçe</span>
+          </div>
+          <div class="quick-setting-item">
+            <span>🎨 Tema</span>
+            <span id="quick-theme-display">Mor</span>
+          </div>
+        </div>
       </section>
 
     </main>
 
-    <!-- ========== NAVIGATION ========== -->
-    <nav class="bottom-nav">
-      <div class="nav-item active" data-view="home" id="nav-home">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-label">Portal</span>
-      </div>
-      <div class="nav-item" data-view="stats" id="nav-stats">
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">İstatistik</span>
-      </div>
-    </nav>
-  </div>
+  </div><!-- /#app -->
 
-  </div>
-  <!-- end #app -->
+  <!-- ========== NAVIGATION (5 Tabs) ========== -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" data-view="home" id="nav-home">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label" data-i18n="nav_home">Portal</span>
+    </div>
+    <div class="nav-item" data-view="popular" id="nav-popular">
+      <span class="nav-icon">🔥</span>
+      <span class="nav-label" data-i18n="nav_popular">Popüler</span>
+    </div>
+    <div class="nav-item" data-view="feed" id="nav-feed">
+      <span class="nav-icon">✨</span>
+      <span class="nav-label">Akış</span>
+    </div>
+    <div class="nav-item" data-view="stats" id="nav-stats">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label" data-i18n="nav_stats">İstatistik</span>
+    </div>
+    <div class="nav-item" data-view="profile" id="nav-profile">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label" data-i18n="nav_profile">Profil</span>
+    </div>
+  </nav>
+
 
   <!-- ========== MOVIE DETAIL MODAL ========== -->
   <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Film detayı">
     <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div id="modal-backdrop-container"></div>
+      <div id="modal-backdrop-container" class="modal-backdrop-container"></div>
       <div class="modal-body">
-        <div class="modal-header">
+        <div class="modal-header-info">
           <div id="modal-title" class="modal-title"></div>
-          <div class="modal-meta">
-            <span id="modal-type" class="modal-meta-item"></span>
-            <span class="modal-meta-item dot">·</span>
-            <span id="modal-year" class="modal-meta-item"></span>
-            <span id="modal-runtime" class="modal-meta-item"></span>
-            <span id="modal-rating" class="modal-rating"></span>
-          </div>
         </div>
-        <div id="modal-genres" class="modal-genres"></div>
+        
+        <div class="modal-meta-row">
+          <span id="modal-type" class="modal-type-tag"></span>
+          <span id="modal-year"></span>
+          <span id="modal-runtime"></span>
+          <span id="modal-rating"></span>
+        </div>
+
+        <div id="modal-genres" class="genre-tags"></div>
         <p id="modal-overview" class="modal-overview"></p>
 
-        <!-- Rating & Comments -->
-        <div class="user-feedback-section">
-          <div class="section-title"
-            style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; color:var(--text-secondary)">
-            Senin Puanın</div>
-          <div class="rating-bar-container">
-            <div class="rating-bar" id="modal-rating-stars">
-              <!-- Stars will be injected here -->
+        <!-- Series Tracker -->
+        <div id="modal-series-tracker" class="tracker-card" style="display: none;">
+          <div class="tracker-item">
+            <span class="tracker-label">Sezon</span>
+            <div class="tracker-controls">
+              <button id="btn-season-minus" class="btn-track">-</button>
+              <span id="tracker-season-val" class="tracker-val">1</span>
+              <button id="btn-season-plus" class="btn-track">+</button>
             </div>
-            <div id="modal-rating-value" class="rating-value-display">0.0</div>
           </div>
-          <div class="comment-input-wrap">
-            <textarea id="modal-comment-text" class="comment-textarea"
-              placeholder="Bu yapımla ilgili notların..."></textarea>
+          <div class="tracker-item">
+            <span class="tracker-label">Bölüm</span>
+            <div class="tracker-controls">
+              <button id="btn-episode-minus" class="btn-track">-</button>
+              <span id="tracker-episode-val" class="tracker-val">1</span>
+              <button id="btn-episode-plus" class="btn-track">+</button>
+            </div>
           </div>
         </div>
 
-        <button id="modal-watch-btn" class="btn-watch-toggle unwatched" style="margin-top:24px">
-          <span>▶</span>
-          <span class="toggle-text">İzledim olarak işaretle</span>
-        </button>
-        <br><br>
-        <button id="modal-close-btn" class="btn-icon"
-          style="width:100%;border-radius:var(--radius-md);height:44px;font-size:14px;color:var(--text-muted)"
-          aria-label="Kapat">Kapat</button>
+        <!-- Rating Section -->
+        <div class="modal-section">
+          <div class="modal-section-title">Senin Puanın</div>
+          <div class="star-rating-container">
+            <div id="modal-rating-stars" class="stars-wrap"></div>
+            <div id="modal-rating-value" class="rating-val">0.0</div>
+          </div>
+        </div>
+
+        <!-- Notes Section -->
+        <div class="modal-section">
+          <div class="modal-section-title">Notlarım</div>
+          <textarea id="modal-comment-text" class="notes-area" placeholder="Bu yapım hakkındaki düşüncelerin..."></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="modal-actions">
+          <button id="modal-watch-btn" class="btn-watch-toggle unwatched">
+            <span>▶</span>
+            <span class="toggle-text">İzledim olarak işaretle</span>
+          </button>
+          <button id="modal-watchlist-btn" class="modal-watchlist-btn" title="Listeme Ekle">🔖</button>
+        </div>
+
+        <button id="modal-close-btn" class="btn-icon" style="width:100%; margin-top:25px; border-radius:14px; font-size:14px; color:var(--text-muted)">Kapat</button>
       </div>
     </div>
   </div>
 
 
 
-  <script src="data.js"></script>
-  <script src="tmdb.js"></script>
-  <script src="app.js"></script>
+  <script src="data.js?v=22.1"></script>
+  <script src="tmdb.js?v=22.1"></script>
+  <script src="firebase-app.js?v=22.1"></script>
+  <script src="app.js?v=28.2"></script>
 </body>
 
 </html>

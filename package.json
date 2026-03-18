@@ -1,0 +1,25 @@
+{
+  "name": "film",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emochi744/VerseWatch2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/emochi744/VerseWatch2/issues"
+  },
+  "homepage": "https://github.com/emochi744/VerseWatch2#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
